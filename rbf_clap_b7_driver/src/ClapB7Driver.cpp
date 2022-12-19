@@ -37,8 +37,12 @@ ClapB7Driver::ClapB7Driver()
                       ParameterValue{"/clap_b7_data"},
                       ParameterDescriptor{})
                               .get<std::string>()},
-
-      serial_boost("/dev/ttyUSB0", 230400),
+      serial_name_{this->declare_parameter(
+                      "serial_name",
+                      ParameterValue{"/dev/ttyUSB0"},
+                      ParameterDescriptor{})
+                              .get<std::string>()},
+      serial_boost(serial_name_, 230400),
 
       pub_gnss_status_{create_publisher<rbf_clap_b7_msgs::msg::GNSSStatus>(
               gnss_status_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -195,16 +199,20 @@ void ClapB7Driver::ParseDataASCII(const char* serial_data) {
         freq++;
         clapB7Controller.clapData.ins_status= stringToNum<uint32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.pos_type= stringToNum<uint32_t>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.latitude= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.longitude= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.height= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.undulation= stringToNum<float>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.north_velocity= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.east_velocity= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.up_velocity= stringToNum<double>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.roll= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.pitch= stringToNum<double>(seperated_data_.at(i++));
         clapB7Controller.clapData.azimuth= stringToNum<double>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.std_dev_latitude= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.std_dev_longitude= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.std_dev_height= stringToNum<float>(seperated_data_.at(i++));
@@ -214,25 +222,33 @@ void ClapB7Driver::ParseDataASCII(const char* serial_data) {
         clapB7Controller.clapData.std_dev_roll= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.std_dev_pitch= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.std_dev_azimuth= stringToNum<float>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.extended_solution_stat= stringToNum<uint32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.time_since_update= stringToNum<uint16_t>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.imu_error= atoi((seperated_data_.at(i++).c_str()));
         clapB7Controller.clapData.imu_type= atoi((seperated_data_.at(i++).c_str()));
+
         clapB7Controller.clapData.z_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.y_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.x_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.z_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.y_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.x_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.gps_sat_num= atoi((seperated_data_.at(i++)).c_str());
         clapB7Controller.clapData.bd_sat_num= atoi((seperated_data_.at(i++).c_str()));
         clapB7Controller.clapData.glo_sat_num= atoi((seperated_data_.at(i++).c_str()));
         clapB7Controller.clapData.gal_sat_num= atoi(seperated_data_.at(i++).c_str());
+
         clapB7Controller.clapData.rtk_delay= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.gdop= stringToNum<float>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.remain_float_1= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.remain_float_2= stringToNum<float>(seperated_data_.at(i++));
         clapB7Controller.clapData.remain_double= stringToNum<double>(seperated_data_.at(i++));
+
         clapB7Controller.clapData.remain_char_1= atoi((seperated_data_.at(i++).c_str()));
         clapB7Controller.clapData.remain_char_2= atoi((seperated_data_.at(i++).c_str()));
         clapB7Controller.clapData.remain_char_3= atoi((seperated_data_.at(i++).c_str()));

@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="clap_b7_driver_path" default="$(find-pkg-share rbf_clap_b7_driver)/config/clap_b7_driver.param.yaml"/>
+
+    <!-- launch clap driver -->
+    <node pkg="rbf_clap_b7_driver" exec="rbf_clap_b7_driver_exe" name="rbf_clap_b7_driver" output="screen">
+        <param from="$(var clap_b7_driver_path)"/>
+    </node>
+
+</launch>
