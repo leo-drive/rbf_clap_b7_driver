@@ -42,6 +42,13 @@ ClapB7Driver::ClapB7Driver()
                       ParameterValue{"/dev/ttyUSB0"},
                       ParameterDescriptor{})
                               .get<std::string>()},
+
+      parse_type_{this->declare_parameter(
+                      "parse_type",
+                      ParameterValue{"ASCII"},
+                      ParameterDescriptor{})
+                              .get<std::string>()},
+
       serial_boost(serial_name_, 230400),
 
       pub_gnss_status_{create_publisher<rbf_clap_b7_msgs::msg::GNSSStatus>(
@@ -59,14 +66,19 @@ ClapB7Driver::ClapB7Driver()
       timer_{this->create_wall_timer(
             1000ms, std::bind(&ClapB7Driver::timer_callback, this))}
 
-        {
-            using namespace std::placeholders;
-            serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
-            std::cout << "I am in node ctor\n";
-//            ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
-        }
+{
+    using namespace std::placeholders;
 
+    serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
+    if(parse_type_ == "BINARY") {
+        ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
+    }
+    else if(parse_type_ != "ASCII"){
+        RCLCPP_ERROR(this->get_logger(), "PARSE TYPE DOESN'T MATCH ANY FORMAT, USE 'ASCII' OR 'BINARY' INSTEAD");
+        exit(-1);
+    }
+}
 
 #define PI 3.141592653589793
 template <typename Type>
@@ -92,7 +104,10 @@ string numToString (const Type &num)
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 {
     RCLCPP_INFO_STREAM(this->get_logger(), "Boost Data Size: '" << numToString(len) << "'");
-    ParseDataASCII(data);
+
+    if (parse_type_ == "ASCII") {
+        ParseDataASCII(data);
+    }
 }
 
 void ClapB7Driver::timer_callback() {

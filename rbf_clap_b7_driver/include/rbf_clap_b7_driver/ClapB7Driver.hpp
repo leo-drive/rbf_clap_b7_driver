@@ -62,6 +62,7 @@ private:
 
     std::string clap_data_topic_;
     std::string serial_name_;
+    std::string parse_type_;
 
     CallbackAsyncSerial serial_boost;
 

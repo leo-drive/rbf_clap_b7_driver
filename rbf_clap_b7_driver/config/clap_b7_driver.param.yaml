@@ -1,3 +1,4 @@
 /**:
   ros__parameters:
     serial_name: "/dev/ttyUSB0"
+    parse_type: "ASCII"
