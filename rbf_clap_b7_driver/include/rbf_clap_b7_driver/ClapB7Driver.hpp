@@ -64,6 +64,8 @@ private:
     std::string serial_name_;
     std::string parse_type_;
 
+    long baud_rate_;
+
     CallbackAsyncSerial serial_boost;
 
     std::vector<std::string> seperated_data_;

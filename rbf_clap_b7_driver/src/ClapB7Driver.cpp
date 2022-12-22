@@ -49,7 +49,12 @@ ClapB7Driver::ClapB7Driver()
                       ParameterDescriptor{})
                               .get<std::string>()},
 
-      serial_boost(serial_name_, 230400),
+      baud_rate_{this->declare_parameter(
+              "baud_rate",
+              ParameterValue{460800},
+              ParameterDescriptor{}).get<long>()},
+
+      serial_boost(serial_name_, baud_rate_),
 
       pub_gnss_status_{create_publisher<rbf_clap_b7_msgs::msg::GNSSStatus>(
               gnss_status_topic_, rclcpp::QoS{10}, PubAllocT{})},
