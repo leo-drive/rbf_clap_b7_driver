@@ -32,7 +32,7 @@
 #include "rbf_clap_b7_msgs/msg/std_deviation_data.hpp"
 #include <rbf_clap_b7_msgs/msg/clap_imu.hpp>
 #include <rbf_clap_b7_msgs/msg/clap_data.hpp>
-
+#include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
 
 class ClapB7Driver : public rclcpp::Node
@@ -64,10 +64,18 @@ private:
     std::string serial_name_;
     std::string parse_type_;
 
+    long baud_rate_;
+
     CallbackAsyncSerial serial_boost;
 
     std::vector<std::string> seperated_data_;
     std::string header_;
+
+    std::string ntrip_server_ip_;
+    std::string username_;
+    std::string password_;
+    std::string mount_point_;
+    int ntrip_port_;
 
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::GNSSStatus>::SharedPtr pub_gnss_status_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::NavigationData>::SharedPtr pub_nav_data_;
@@ -82,4 +90,8 @@ private:
     double accel_scale_factor = 400/(pow(2, 31));
     double gyro_scale_factor = 2160/(pow(2, 31));
     int freq = 0;
+
+    libntrip::NtripClient ntripClient;
+    int NTRIP_client_start();
+    int t_size;
 };

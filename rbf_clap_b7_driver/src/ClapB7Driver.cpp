@@ -49,7 +49,38 @@ ClapB7Driver::ClapB7Driver()
                       ParameterDescriptor{})
                               .get<std::string>()},
 
-      serial_boost(serial_name_, 230400),
+      baud_rate_{this->declare_parameter(
+              "baud_rate",
+              ParameterValue{460800},
+              ParameterDescriptor{})
+                              .get<long>()},
+
+      serial_boost(serial_name_, baud_rate_),
+
+      ntrip_server_ip_{this->declare_parameter("ntrip_ip",
+                                               ParameterValue("212.156.70.42"),
+                                               ParameterDescriptor{})
+                               .get<std::string>()},
+
+      username_{this->declare_parameter("ntrip_username",
+                                        ParameterValue("K073432501"),
+                                        ParameterDescriptor{})
+                        .get<std::string>()},
+
+      password_{this->declare_parameter("ntrip_password",
+                                        ParameterValue("GR3g4"),
+                                        ParameterDescriptor{})
+                        .get<std::string>()},
+
+      mount_point_{this->declare_parameter("ntrip_mount_point",
+                                           ParameterValue("VRSRTCM31"),
+                                           ParameterDescriptor{})
+                           .get<std::string>()},
+
+      ntrip_port_{static_cast<int>(this->declare_parameter("ntrip_port",
+                                                           ParameterValue(2101),
+                                                           ParameterDescriptor{})
+                                                           .get<int>())},
 
       pub_gnss_status_{create_publisher<rbf_clap_b7_msgs::msg::GNSSStatus>(
               gnss_status_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -70,6 +101,7 @@ ClapB7Driver::ClapB7Driver()
     using namespace std::placeholders;
 
     serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
+    NTRIP_client_start();
 
     if(parse_type_ == "BINARY") {
         ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
@@ -107,6 +139,9 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 
     if (parse_type_ == "ASCII") {
         ParseDataASCII(data);
+    }
+    else{
+        ClapB7Parser(&clapB7Controller, reinterpret_cast<const uint8_t *>(data), len);
     }
 }
 
@@ -410,4 +445,22 @@ void ClapB7Driver::pub_ClapB7Data() {
     msg_clap_data.set__remain_char_4(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_4));
 
     pub_clap_data_->publish(msg_clap_data);
+}
+int ClapB7Driver::NTRIP_client_start()
+{
+  ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
+  ntripClient.OnReceived([this](const char *buffer, int size)
+                         {
+                             serial_boost.write(buffer, size);
+
+                             t_size += size;
+
+                             std::cout << "NTRIP:" << t_size << std::endl; });
+
+  ntripClient.set_location(28.890924848, 41.018893949);
+
+  ntripClient.set_report_interval(10);
+  ntripClient.Run();
+
+  return 0;
 }

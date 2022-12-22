@@ -18,7 +18,7 @@
   <depend>rclcpp</depend>
   <depend>std_msgs</depend>
   <depend>rbf_clap_b7_msgs</depend>
-
+  <depend>ntrip_client</depend>
   <depend>sensor_msgs</depend>
   <depend>nav_msgs</depend>
   <depend>nmea_msgs</depend>

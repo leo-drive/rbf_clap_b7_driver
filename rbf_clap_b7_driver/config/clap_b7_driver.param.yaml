@@ -1,4 +1,5 @@
 /**:
   ros__parameters:
     serial_name: "/dev/ttyUSB0"
-    parse_type: "ASCII"
+    parse_type: "BINARY"
+    baud_rate: 460800
