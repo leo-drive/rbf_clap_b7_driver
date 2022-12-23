@@ -109,7 +109,7 @@ ClapB7Driver::ClapB7Driver()
         RCLCPP_ERROR(this->get_logger(), "PARSE TYPE DOESN'T MATCH ANY FORMAT, USE 'ASCII' OR 'BINARY' INSTEAD");
         exit(-1);
     }
-//    NTRIP_client_start();
+    NTRIP_client_start();
 }
 
 #define PI 3.141592653589793
@@ -135,7 +135,7 @@ string numToString (const Type &num)
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 {
-    RCLCPP_INFO_STREAM(this->get_logger(), "Boost Data Size: '" << numToString(len) << "'");
+//    RCLCPP_INFO_STREAM(this->get_logger(), "Boost Data Size: '" << numToString(len) << "'");
 
     if (parse_type_ == "ASCII") {
         ParseDataASCII(data);
