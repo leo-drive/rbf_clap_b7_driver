@@ -171,9 +171,10 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                     }
                     else{
 						//TODO : crcError control
-					p_Controller->dataIndex = 0;
-					p_Controller->status = SYNCH1_CONTROL;
+
 				    }
+                    p_Controller->dataIndex = 0;
+                    p_Controller->status = SYNCH1_CONTROL;
                 }
 				break;
 			}
