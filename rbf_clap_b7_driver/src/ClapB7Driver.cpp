@@ -51,7 +51,7 @@ ClapB7Driver::ClapB7Driver()
 
       baud_rate_{this->declare_parameter(
               "baud_rate",
-              ParameterValue{460800},
+              ParameterValue{230400},
               ParameterDescriptor{})
                               .get<long>()},
 
@@ -451,15 +451,16 @@ int ClapB7Driver::NTRIP_client_start()
   ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
   ntripClient.OnReceived([this](const char *buffer, int size)
                          {
+
                              serial_boost.write(buffer, size);
 
                              t_size += size;
 
                              std::cout << "NTRIP:" << t_size << std::endl; });
 
-  ntripClient.set_location(28.890924848, 41.018893949);
+  ntripClient.set_location(41.018893949, 28.890924848);
 
-  ntripClient.set_report_interval(10);
+  ntripClient.set_report_interval(0.001);
   ntripClient.Run();
 
   return 0;
