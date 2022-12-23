@@ -45,7 +45,7 @@ ClapB7Driver::ClapB7Driver()
 
       parse_type_{this->declare_parameter(
                       "parse_type",
-                      ParameterValue{"ASCII"},
+                      ParameterValue{"BINARY"},
                       ParameterDescriptor{})
                               .get<std::string>()},
 
@@ -101,7 +101,6 @@ ClapB7Driver::ClapB7Driver()
     using namespace std::placeholders;
 
     serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
-    NTRIP_client_start();
 
     if(parse_type_ == "BINARY") {
         ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
@@ -110,6 +109,7 @@ ClapB7Driver::ClapB7Driver()
         RCLCPP_ERROR(this->get_logger(), "PARSE TYPE DOESN'T MATCH ANY FORMAT, USE 'ASCII' OR 'BINARY' INSTEAD");
         exit(-1);
     }
+//    NTRIP_client_start();
 }
 
 #define PI 3.141592653589793
@@ -146,8 +146,8 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 }
 
 void ClapB7Driver::timer_callback() {
-    std::cout << "frekans = " << freq << "\n";
-    freq = 0;
+    std::cout << "frekans = " << clapB7Controller.freq << "\n";
+    clapB7Controller.freq = 0;
 }
 
 void ClapB7Driver::ParseDataASCII(const char* serial_data) {

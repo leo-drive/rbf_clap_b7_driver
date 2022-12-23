@@ -152,7 +152,7 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 
 			case CLAP_B7_DATA_ADD :
 			{
-				p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
+                p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
 				if(p_Controller->dataIndex >= p_Controller->header.msgLen + HEADER_LEN + CRC_LEN)
 				{
 					uint32_t crc;
@@ -161,7 +161,7 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                     {
                         memcpy(&p_Controller->clapData, (p_Controller->rawData + HEADER_LEN), sizeof(ClapB7Data));
                         p_Controller->freq++;
-                        p_Controller->Parser();
+                       p_Controller->Parser();
                     }
                     else{
 						//TODO : crcError control
