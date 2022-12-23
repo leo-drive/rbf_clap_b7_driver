@@ -141,7 +141,13 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 
 			case CLAP_B7_HEADER_ADD :
 			{
-				p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
+	uint32_t crc;
+					memcpy((uint8_t *)&(crc), (uint8_t*)(p_Controller->rawData + p_Controller->header.msgLen + HEADER_LEN), sizeof(uint32_t));
+					if(CalculateCRC32(p_Controller->rawData, (int32_t)(p_Controller->dataIndex - CRC_LEN)) == crc)
+                    {
+                        memcpy(&p_Controller->clapData, (p_Controller->rawData + HEADER_LEN), sizeof(ClapB7Data));
+                        p_Controller->freq++;
+                        p_Controller			p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
 				if(p_Controller->dataIndex >= HEADER_LEN)
 				{
 					memcpy((uint8_t*)&(p_Controller->header), (p_Controller->rawData), sizeof(ClapB7Header));

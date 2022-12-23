@@ -45,7 +45,7 @@ ClapB7Driver::ClapB7Driver()
 
       parse_type_{this->declare_parameter(
                       "parse_type",
-                      ParameterValue{"ASCII"},
+                      ParameterValue{"BINARY"},
                       ParameterDescriptor{})
                               .get<std::string>()},
 
@@ -113,11 +113,12 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
     if (parse_type_ == "ASCII") {
         ParseDataASCII(data);
     }
+    ClapB7Parser(&clapB7Controller, reinterpret_cast<const uint8_t *>(data), len);
 }
 
 void ClapB7Driver::timer_callback() {
-    std::cout << "frekans = " << freq << "\n";
-    freq = 0;
+    std::cout << "frekans = " << clapB7Controller.freq << "\n";
+    clapB7Controller.freq = 0;
 }
 
 void ClapB7Driver::ParseDataASCII(const char* serial_data) {
