@@ -1,5 +1,5 @@
 /*
- * um482.c
+ * ClapB7BinaryParser.cpp
  *
  *  Created on: May 28, 2022
  *      Author: yemre
@@ -160,14 +160,11 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 					if(CalculateCRC32(p_Controller->rawData, (int32_t)(p_Controller->dataIndex - CRC_LEN)) == crc)
                     {
                         memcpy(&p_Controller->clapData, (p_Controller->rawData + HEADER_LEN), sizeof(ClapB7Data));
-                        p_Controller->freq++;
-                       p_Controller->Parser();
+                        p_Controller->Parser();
                     }
                     else{
-						//TODO : crcError control
-
-				    }
-
+				        //scanned bytes don't contain meaningful data
+                    }
                     p_Controller->dataIndex = 0;
                     p_Controller->status = SYNCH1_CONTROL;
                 }

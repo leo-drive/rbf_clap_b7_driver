@@ -1,5 +1,5 @@
 /**:
   ros__parameters:
-    serial_name: "/dev/ttyACM0"
+    serial_name: "/dev/pts/3"
     parse_type: "BINARY"
     baud_rate: 460800

@@ -12,31 +12,14 @@ using rcl_interfaces::msg::ParameterDescriptor;
 using rclcpp::ParameterValue;
 
 ClapB7Driver::ClapB7Driver()
-    : Node("rbf_um482_driver"),
-
-      gnss_status_topic_{this->declare_parameter(
-                        "gnss_status_topic",
-                        ParameterValue{"/gnss_status"},
-                        ParameterDescriptor{})
-                                    .get<std::string>()},
-
-      nav_data_topic_{this->declare_parameter(
-                      "nav_data_topic",
-                      ParameterValue{"/nav_data"},
-                      ParameterDescriptor{})
-                                 .get<std::string>()},
-
-      std_deviation_data_topic_{this->declare_parameter(
-                                "std_deviation_data_topic",
-                                ParameterValue{"/std_deviation_data"},
-                                ParameterDescriptor{})
-                                 .get<std::string>()},
+    : Node("rbf_clap_b7_driver"),
 
       clap_data_topic_{this->declare_parameter(
                       "clap_imu_data",
                       ParameterValue{"/clap_b7_data"},
                       ParameterDescriptor{})
                               .get<std::string>()},
+
       serial_name_{this->declare_parameter(
                       "serial_name",
                       ParameterValue{"/dev/ttyUSB0"},
@@ -51,7 +34,7 @@ ClapB7Driver::ClapB7Driver()
 
       baud_rate_{this->declare_parameter(
               "baud_rate",
-              ParameterValue{230400},
+              ParameterValue{460800},
               ParameterDescriptor{})
                               .get<long>()},
 
@@ -82,15 +65,6 @@ ClapB7Driver::ClapB7Driver()
                                                            ParameterDescriptor{})
                                                            .get<int>())},
 
-      pub_gnss_status_{create_publisher<rbf_clap_b7_msgs::msg::GNSSStatus>(
-              gnss_status_topic_, rclcpp::QoS{10}, PubAllocT{})},
-
-      pub_nav_data_{create_publisher<rbf_clap_b7_msgs::msg::NavigationData>(
-              nav_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
-
-      pub_std_deviation_data_{create_publisher<rbf_clap_b7_msgs::msg::StdDeviationData>(
-              std_deviation_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
-
       pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
               clap_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
@@ -112,7 +86,6 @@ ClapB7Driver::ClapB7Driver()
     NTRIP_client_start();
 }
 
-#define PI 3.141592653589793
 template <typename Type>
 Type stringToNum(const string &str)
 {
@@ -146,8 +119,6 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 }
 
 void ClapB7Driver::timer_callback() {
-    std::cout << "frekans = " << clapB7Controller.freq << "\n";
-    clapB7Controller.freq = 0;
 }
 
 void ClapB7Driver::ParseDataASCII(const char* serial_data) {
@@ -170,83 +141,8 @@ void ClapB7Driver::ParseDataASCII(const char* serial_data) {
     }
     seperated_data_.push_back(raw_serial_data);
 
-    if((header_ == "#AGRICA") && (seperated_data_.size() >= 65) )
-    {
-        int i = 1;
-        AgricMsg_p->command_length = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->year = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->month = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->day = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->hour = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->minute = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->second = atoi(seperated_data_.at(i++).c_str());
-
-        AgricMsg_p->RtkStatus = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->HeadingStatus = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->numGPSsat = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->numBDSsat = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->numGLOsat = atoi(seperated_data_.at(i++).c_str());
-
-        AgricMsg_p->Baseline_N = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Baseline_E = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Baseline_U = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Baseline_NStd = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Baseline_EStd = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Baseline_UStd = stringToNum<float>(seperated_data_.at(i++));
-
-        AgricMsg_p->Heading = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Pitch = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Roll = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Speed = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Velocity_N = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Velocity_E = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Velocity_U = stringToNum<float>(seperated_data_.at(i++));
-
-        AgricMsg_p->Xigema_Vx = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_Vy = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_Vz = stringToNum<float>(seperated_data_.at(i++));
-
-        AgricMsg_p->lat = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->lon = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->Het = stringToNum<double>(seperated_data_.at(i++));
-
-        AgricMsg_p->ecef_x = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->ecef_y = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->ecef_z = stringToNum<double>(seperated_data_.at(i++));
-
-        AgricMsg_p->Xigema_lat = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_lon = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_alt = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_ecef_x = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_ecef_y = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->Xigema_ecef_z = stringToNum<float>(seperated_data_.at(i++));
-
-        AgricMsg_p->base_lat = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->base_lon = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->base_alt = stringToNum<double>(seperated_data_.at(i++));
-
-        AgricMsg_p->sec_lat = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->sec_lon = stringToNum<double>(seperated_data_.at(i++));
-        AgricMsg_p->sec_alt = stringToNum<double>(seperated_data_.at(i++));
-
-        AgricMsg_p->gps_week_second = stringToNum<int>(seperated_data_.at(i++));
-
-        AgricMsg_p->diffage = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->speed_heading = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->undulation = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->remain_float3 = stringToNum<float>(seperated_data_.at(i++));
-        AgricMsg_p->remain_float4 = stringToNum<float>(seperated_data_.at(i++));
-
-        AgricMsg_p->numGALsat = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->remain_char2 = atoi(seperated_data_.at(i++).c_str());
-        AgricMsg_p->remain_char3 = atoi(seperated_data_.at(i++).c_str());
-
-        pub_GnssData();
-
-    }
-    else if (header_ == "#INTERESULTA") {
+    if (header_ == "#INTERESULTA") {
         int i = 0;
-        freq++;
         clapB7Controller.clapData.ins_status= stringToNum<uint32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.pos_type= stringToNum<uint32_t>(seperated_data_.at(i++));
 
@@ -310,72 +206,6 @@ void ClapB7Driver::ParseDataASCII(const char* serial_data) {
         RCLCPP_WARN(this->get_logger(), "Received data doesn't match with any header");
     }
     seperated_data_.clear();
-}
-
-void ClapB7Driver::pub_GnssData() {
-    rbf_clap_b7_msgs::msg::GNSSStatus msg_gnssStatus;
-    rbf_clap_b7_msgs::msg::NavigationData msg_navData;
-    rbf_clap_b7_msgs::msg::StdDeviationData msg_StdDevData;
-
-    msg_gnssStatus.set__command_length(static_cast<uint8_t>(AgricMsg_p->command_length));
-    msg_gnssStatus.set__year(static_cast<uint8_t>(AgricMsg_p->year));
-    msg_gnssStatus.set__month(static_cast<uint8_t>(AgricMsg_p->month));
-    msg_gnssStatus.set__day(static_cast<uint8_t>(AgricMsg_p->day));
-    msg_gnssStatus.set__hour(static_cast<uint8_t>(AgricMsg_p->hour));
-    msg_gnssStatus.set__minute(static_cast<uint8_t>(AgricMsg_p->minute));
-    msg_gnssStatus.set__second(static_cast<uint8_t>(AgricMsg_p->second));
-
-    msg_gnssStatus.set__rtk_status(static_cast<uint8_t>(AgricMsg_p->RtkStatus));
-    msg_gnssStatus.set__heading_status(static_cast<uint8_t>(AgricMsg_p->HeadingStatus));
-    msg_gnssStatus.set__num_gps_sat(static_cast<uint8_t>(AgricMsg_p->numGPSsat));
-    msg_gnssStatus.set__num_bds_sat(static_cast<uint8_t>(AgricMsg_p->numBDSsat));
-    msg_gnssStatus.set__num_glo_sat(static_cast<uint8_t>(AgricMsg_p->numGLOsat));
-    msg_gnssStatus.set__num_gal_sat(static_cast<uint8_t>(AgricMsg_p->numGALsat));
-
-    msg_gnssStatus.set__gps_week_second(static_cast<int32_t>(AgricMsg_p->gps_week_second));
-    msg_gnssStatus.set__diffage(static_cast<float>(AgricMsg_p->diffage));
-    msg_gnssStatus.set__speed_heading(static_cast<float>(AgricMsg_p->speed_heading));
-    msg_gnssStatus.set__undulation(static_cast<float>(AgricMsg_p->undulation));
-
-    msg_navData.baseline.set__north(static_cast<float>(AgricMsg_p->Baseline_N));
-    msg_navData.baseline.set__east(static_cast<float>(AgricMsg_p->Baseline_E));
-    msg_navData.baseline.set__up(static_cast<float>(AgricMsg_p->Baseline_U));
-    msg_navData.set__heading(static_cast<float>(AgricMsg_p->Heading));
-    msg_navData.set__pitch(static_cast<float>(AgricMsg_p->Pitch));
-    msg_navData.set__roll(static_cast<float>(AgricMsg_p->Roll));
-    msg_navData.set__speed(static_cast<float>(AgricMsg_p->Speed));
-    msg_navData.velocity.set__north(static_cast<float>(AgricMsg_p->Velocity_N));
-    msg_navData.velocity.set__east(static_cast<float>(AgricMsg_p->Velocity_E));
-    msg_navData.velocity.set__up(static_cast<float>(AgricMsg_p->Velocity_U));
-    msg_navData.set__lat(static_cast<double>(AgricMsg_p->lat));
-    msg_navData.set__lon(static_cast<double>(AgricMsg_p->lon));
-    msg_navData.set__het(static_cast<double>(AgricMsg_p->Het));
-    msg_navData.set__ecef_x(static_cast<double>(AgricMsg_p->ecef_x));
-    msg_navData.set__ecef_y(static_cast<double>(AgricMsg_p->ecef_y));
-    msg_navData.set__ecef_z(static_cast<double>(AgricMsg_p->ecef_z));
-    msg_navData.set__base_lat(static_cast<double>(AgricMsg_p->base_lat));
-    msg_navData.set__base_lon(static_cast<double>(AgricMsg_p->base_lon));
-    msg_navData.set__base_alt(static_cast<double>(AgricMsg_p->base_alt));
-    msg_navData.set__sec_lat(static_cast<double>(AgricMsg_p->sec_lat));
-    msg_navData.set__sec_lon(static_cast<double>(AgricMsg_p->sec_lon));
-    msg_navData.set__sec_alt(static_cast<double>(AgricMsg_p->sec_alt));
-
-    msg_StdDevData.baseline_std.set__north(static_cast<float>(AgricMsg_p->Baseline_NStd));
-    msg_StdDevData.baseline_std.set__east(static_cast<float>(AgricMsg_p->Baseline_EStd));
-    msg_StdDevData.baseline_std.set__up(static_cast<float>(AgricMsg_p->Baseline_UStd));
-    msg_StdDevData.set__sigma_v_x(static_cast<float>(AgricMsg_p->Xigema_Vx));
-    msg_StdDevData.set__sigma_v_y(static_cast<float>(AgricMsg_p->Xigema_Vy));
-    msg_StdDevData.set__sigma_v_z(static_cast<float>(AgricMsg_p->Xigema_Vz));
-    msg_StdDevData.set__sigma_lat(static_cast<float>(AgricMsg_p->Xigema_lat));
-    msg_StdDevData.set__sigma_lon(static_cast<float>(AgricMsg_p->Xigema_lon));
-    msg_StdDevData.set__sigma_alt(static_cast<float>(AgricMsg_p->Xigema_alt));
-    msg_StdDevData.set__sigma_ecef_x(static_cast<float>(AgricMsg_p->Xigema_ecef_x));
-    msg_StdDevData.set__sigma_ecef_y(static_cast<float>(AgricMsg_p->Xigema_ecef_y));
-    msg_StdDevData.set__sigma_ecef_z(static_cast<float>(AgricMsg_p->Xigema_ecef_z));
-
-    pub_gnss_status_->publish(msg_gnssStatus);
-    pub_nav_data_->publish(msg_navData);
-    pub_std_deviation_data_->publish(msg_StdDevData);
 }
 
 void ClapB7Driver::pub_ClapB7Data() {

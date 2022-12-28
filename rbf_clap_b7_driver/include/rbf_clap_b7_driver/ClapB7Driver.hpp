@@ -1,8 +1,8 @@
 //
 // Created by arslan on 22.05.2022.
 //
-
 #pragma once
+
 #include <chrono>
 #include <functional>
 #include <memory>
@@ -26,11 +26,6 @@
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
 
-#include "rbf_clap_b7_msgs/msg/enu.hpp"
-#include "rbf_clap_b7_msgs/msg/gnss_status.hpp"
-#include "rbf_clap_b7_msgs/msg/navigation_data.hpp"
-#include "rbf_clap_b7_msgs/msg/std_deviation_data.hpp"
-#include <rbf_clap_b7_msgs/msg/clap_imu.hpp>
 #include <rbf_clap_b7_msgs/msg/clap_data.hpp>
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
@@ -51,14 +46,9 @@ private:
 
 
     void ParseDataASCII(const char* serial_data);
-    void pub_GnssData();
 
     void pub_ClapB7Data();
 
-
-    std::string gnss_status_topic_;
-    std::string nav_data_topic_;
-    std::string std_deviation_data_topic_;
 
     std::string clap_data_topic_;
     std::string serial_name_;
@@ -77,9 +67,6 @@ private:
     std::string mount_point_;
     int ntrip_port_;
 
-    rclcpp::Publisher<rbf_clap_b7_msgs::msg::GNSSStatus>::SharedPtr pub_gnss_status_;
-    rclcpp::Publisher<rbf_clap_b7_msgs::msg::NavigationData>::SharedPtr pub_nav_data_;
-    rclcpp::Publisher<rbf_clap_b7_msgs::msg::StdDeviationData>::SharedPtr pub_std_deviation_data_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
 
     rclcpp::TimerBase::SharedPtr timer_;
