@@ -15,7 +15,6 @@
 
 #include "TermiosSerial.h"
 #include "AsyncSerial.h"
-#include "AgricInfoInterface.h"
 
 #include "rclcpp/rclcpp.hpp"
 
@@ -70,7 +69,6 @@ private:
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
 
     rclcpp::TimerBase::SharedPtr timer_;
-    AgricMsg_* AgricMsg_p{};
 
     ClapB7Controller clapB7Controller;
 
