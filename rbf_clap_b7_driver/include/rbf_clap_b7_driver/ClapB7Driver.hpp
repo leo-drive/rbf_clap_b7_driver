@@ -21,6 +21,9 @@
 #include "nmea_msgs/msg/gpgga.hpp"
 #include "nav_msgs/msg/odometry.hpp"
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
+#include "sensor_msgs/msg/imu.hpp"
+#include "geometry_msgs/msg/quaternion.hpp"
+#include <tf2/LinearMath/Quaternion.h>
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -28,6 +31,9 @@
 #include <rbf_clap_b7_msgs/msg/clap_data.hpp>
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
+
+#define ACCEL_SCALE_FACTOR (400 / (pow(2, 31)))
+#define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
 
 class ClapB7Driver : public rclcpp::Node
 {
@@ -41,42 +47,39 @@ public:
     void serial_receive_callback(const char *data, unsigned int len);
 
 private:
+    
     void timer_callback();
-
-
     void ParseDataASCII(const char* serial_data);
-
     void pub_ClapB7Data();
-
+    int NTRIP_client_start();
+    void publish_standart_msgs();
 
     std::string clap_data_topic_;
+    std::string imu_topic_;
+    std::string nav_sat_fix_topic_;
     std::string serial_name_;
     std::string parse_type_;
-
-    long baud_rate_;
-
-    CallbackAsyncSerial serial_boost;
-
-    std::vector<std::string> seperated_data_;
-    std::string header_;
-
     std::string ntrip_server_ip_;
     std::string username_;
     std::string password_;
     std::string mount_point_;
+
     int ntrip_port_;
+    long baud_rate_;
+    CallbackAsyncSerial serial_boost;
 
+    std::vector<std::string> seperated_data_;
+    std::string header_;
+   
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
-
-    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_imu_;
+    rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
 
     ClapB7Controller clapB7Controller;
 
-    double accel_scale_factor = 400/(pow(2, 31));
-    double gyro_scale_factor = 2160/(pow(2, 31));
-    int freq = 0;
-
     libntrip::NtripClient ntripClient;
-    int NTRIP_client_start();
     int t_size;
+    const float g_ = 9.81f;
+
+    rclcpp::TimerBase::SharedPtr timer_;
 };

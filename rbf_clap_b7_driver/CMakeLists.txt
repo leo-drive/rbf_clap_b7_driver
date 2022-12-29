@@ -9,7 +9,6 @@ include_directories(include/rbf_clap_b7_driver)
 include_directories(rbf_clap_b7_msgs)
 
 find_package(ament_cmake REQUIRED)
-find_package(ament_cmake_auto REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rbf_clap_b7_msgs REQUIRED)

@@ -20,6 +20,18 @@ ClapB7Driver::ClapB7Driver()
                       ParameterDescriptor{})
                               .get<std::string>()},
 
+      imu_topic_{this->declare_parameter(
+                      "imu_topic",
+                      ParameterValue{"/std_imu_data"},
+                      ParameterDescriptor{})
+                               .get<std::string>()},
+
+      nav_sat_fix_topic_{this->declare_parameter(
+                      "nav_sat_fix_topic",
+                      ParameterValue{"/std_nav_sat_fix"},
+                      ParameterDescriptor{})
+                         .get<std::string>()},
+
       serial_name_{this->declare_parameter(
                       "serial_name",
                       ParameterValue{"/dev/ttyUSB0"},
@@ -67,6 +79,12 @@ ClapB7Driver::ClapB7Driver()
 
       pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
               clap_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_imu_{create_publisher<sensor_msgs::msg::Imu>(
+              imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_nav_sat_fix_{create_publisher<sensor_msgs::msg::NavSatFix>(
+              nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       timer_{this->create_wall_timer(
             1000ms, std::bind(&ClapB7Driver::timer_callback, this))}
@@ -248,13 +266,14 @@ void ClapB7Driver::pub_ClapB7Data() {
     msg_clap_data.set__imu_error(static_cast<uint8_t>(clapB7Controller.clapData.imu_error));
     msg_clap_data.set__imu_type(static_cast<uint8_t>(clapB7Controller.clapData.imu_type));
 
-    msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clapData.z_accel_output * accel_scale_factor));
-    msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clapData.y_accel_output * (- accel_scale_factor)));
-    msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clapData.x_accel_output * accel_scale_factor));
 
-    msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.x_gyro_output * gyro_scale_factor));
-    msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.y_gyro_output * ( - gyro_scale_factor)));
-    msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.z_gyro_output * gyro_scale_factor));
+    msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clapData.z_accel_output * ACCEL_SCALE_FACTOR));
+    msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clapData.y_accel_output * (- ACCEL_SCALE_FACTOR)));
+    msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clapData.x_accel_output * ACCEL_SCALE_FACTOR));
+
+    msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.x_gyro_output * GYRO_SCALE_FACTOR));
+    msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.y_gyro_output * ( - GYRO_SCALE_FACTOR)));
+    msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.z_gyro_output * GYRO_SCALE_FACTOR));
 
     msg_clap_data.set__gps_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gps_sat_num));
     msg_clap_data.set__bd_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.bd_sat_num));
@@ -275,7 +294,60 @@ void ClapB7Driver::pub_ClapB7Data() {
     msg_clap_data.set__remain_char_4(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_4));
 
     pub_clap_data_->publish(msg_clap_data);
+
+    publish_standart_msgs();
 }
+
+void ClapB7Driver::publish_standart_msgs() {
+    sensor_msgs::msg::Imu msg_imu;
+    sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
+
+    // GNSS NavSatFix Message
+    msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("std_msgs_frame"));
+    msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
+    msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+
+    msg_nav_sat_fix.status.set__status(0);
+    msg_nav_sat_fix.status.set__service(clapB7Controller.clapData.glo_sat_num + clapB7Controller.clapData.bd_sat_num + clapB7Controller.clapData.gal_sat_num + clapB7Controller.clapData.gps_sat_num);
+
+    msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clapData.latitude));
+    msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
+    msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clapData.height));
+
+    std::array<double, 9> pos_cov{0};
+    pos_cov[0] = clapB7Controller.clapData.std_dev_latitude;
+    pos_cov[4] = clapB7Controller.clapData.std_dev_longitude;
+    pos_cov[8] = clapB7Controller.clapData.std_dev_height;
+
+    msg_nav_sat_fix.set__position_covariance(pos_cov);
+
+    msg_imu.header.set__frame_id(static_cast<std::string>("std_msgs_frame"));
+    msg_imu.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
+    msg_imu.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+
+
+    tf2::Quaternion quart_orient;
+    quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
+    quart_orient.normalize();
+
+    msg_imu.orientation.set__w(static_cast<double>(quart_orient.getW()));
+    msg_imu.orientation.set__x(static_cast<double>(quart_orient.getX()));
+    msg_imu.orientation.set__y(static_cast<double>(quart_orient.getY()));
+    msg_imu.orientation.set__z(static_cast<double>(quart_orient.getZ()));
+
+    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clapData.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clapData.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clapData.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+
+    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clapData.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
+    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clapData.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
+    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clapData.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
+
+
+    pub_imu_->publish(msg_imu);
+    pub_nav_sat_fix_->publish(msg_nav_sat_fix);
+}
+
 int ClapB7Driver::NTRIP_client_start()
 {
   ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
