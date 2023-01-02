@@ -49,10 +49,12 @@ public:
 private:
     
     void timer_callback();
-    void ParseDataASCII(const char* serial_data);
+    void ParseDataASCII(std::string serial_data);
     void pub_ClapB7Data();
     int NTRIP_client_start();
     void publish_standart_msgs();
+    void parse_gpgga(const char* data);
+    void ascii_data_collector(const char* serial_data, int len);
 
     std::string clap_data_topic_;
     std::string imu_topic_;
@@ -66,6 +68,7 @@ private:
 
     int ntrip_port_;
     long baud_rate_;
+
     CallbackAsyncSerial serial_boost;
 
     std::vector<std::string> seperated_data_;
@@ -76,10 +79,10 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
 
     ClapB7Controller clapB7Controller;
-
+    uint8_t ntrip_status_ = 0;
     libntrip::NtripClient ntripClient;
     int t_size;
     const float g_ = 9.81f;
-
+    int freq = 0;
     rclcpp::TimerBase::SharedPtr timer_;
 };

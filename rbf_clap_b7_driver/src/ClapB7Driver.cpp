@@ -40,7 +40,7 @@ ClapB7Driver::ClapB7Driver()
 
       parse_type_{this->declare_parameter(
                       "parse_type",
-                      ParameterValue{"BINARY"},
+                      ParameterValue{"ASCII"},
                       ParameterDescriptor{})
                               .get<std::string>()},
 
@@ -126,10 +126,12 @@ string numToString (const Type &num)
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 {
-//    RCLCPP_INFO_STREAM(this->get_logger(), "Boost Data Size: '" << numToString(len) << "'");
+    if(data[0] == '$') {
+        parse_gpgga(data);
+    }
 
     if (parse_type_ == "ASCII") {
-        ParseDataASCII(data);
+        ascii_data_collector(data, len);
     }
     else{
         ClapB7Parser(&clapB7Controller, reinterpret_cast<const uint8_t *>(data), len);
@@ -137,9 +139,13 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 }
 
 void ClapB7Driver::timer_callback() {
+    printf("timer = %d\n", freq);
+    freq = 0;
 }
 
-void ClapB7Driver::ParseDataASCII(const char* serial_data) {
+void ClapB7Driver::ParseDataASCII(std::string serial_data) {
+
+
     string raw_serial_data = numToString(serial_data);
 
     std::string delimiter = ",";
@@ -159,7 +165,7 @@ void ClapB7Driver::ParseDataASCII(const char* serial_data) {
     }
     seperated_data_.push_back(raw_serial_data);
 
-    if (header_ == "#INTERESULTA") {
+    if (header_ == "INTERESULTA") {
         int i = 0;
         clapB7Controller.clapData.ins_status= stringToNum<uint32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.pos_type= stringToNum<uint32_t>(seperated_data_.at(i++));
@@ -350,6 +356,7 @@ void ClapB7Driver::publish_standart_msgs() {
 
 int ClapB7Driver::NTRIP_client_start()
 {
+
   ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
   ntripClient.OnReceived([this](const char *buffer, int size)
                          {
@@ -363,7 +370,85 @@ int ClapB7Driver::NTRIP_client_start()
   ntripClient.set_location(41.018893949, 28.890924848);
 
   ntripClient.set_report_interval(0.001);
-  ntripClient.Run();
+    ntrip_status_ = ntripClient.Run();
+}
 
-  return 0;
+void ClapB7Driver::parse_gpgga(const char* data) {
+    string raw_serial_data = numToString(data);
+
+    std::string delimiter = ",";
+
+    size_t pos = 0;
+    std::string token;
+
+    int header_pos = raw_serial_data.find(';');
+    header_ = raw_serial_data.substr(0, header_pos);
+    header_ = header_.substr(0, header_.find(','));
+    raw_serial_data.erase(0, header_pos + delimiter.length());
+
+    while ((pos = raw_serial_data.find(delimiter)) != std::string::npos) {
+        token = raw_serial_data.substr(0, pos);
+        seperated_data_.push_back(token);
+        raw_serial_data.erase(0, pos + delimiter.length());
+    }
+    seperated_data_.push_back(raw_serial_data);
+    if(seperated_data_.at(4) == "0") {
+        ntripClient.set_location(clapB7Controller.clapData.latitude, clapB7Controller.clapData.longitude);
+    }
+}
+
+void ClapB7Driver::ascii_data_collector(const char* serial_data, int len) {
+    static int parser_case = 0;
+    static std::string collected_data;
+
+    for (int i = 0; i < len; ++i) {
+        switch (parser_case) {
+            case 0:
+                if (serial_data[i] == '#') {
+                    parser_case++;
+                }
+                else if(serial_data[i] == '$') {
+                    std::string gpgga;
+                    std::string gpgga_symbol;
+                    std::vector<std::string> gpgga_vector;
+                    for (int j = 0; j < 100; ++j) {
+                        if (serial_data[i + j] != '\r') {
+                            gpgga += serial_data[i + j];
+                        }
+                        else{
+//                            for (int k = 0; k < 7; ++k) {
+//                                int pos = gpgga.find(',');
+//
+//                                gpgga_symbol = gpgga.substr(0, pos);
+//                                gpgga_vector.push_back(gpgga_symbol)
+//                            }
+//                            if (gpgga_symbol.at(7) != "0") {
+//
+//                            }
+                            if (ntrip_status_ == 1) {
+                                ntripClient.set_gga_buffer(gpgga);
+                                printf("status = %d\n", ntrip_status_);
+                            }
+
+                            parser_case = 0;
+
+                            break;
+                        }
+                    }
+                }
+            break;
+
+            case 1:
+                if (serial_data[i] != '\r') {
+                    collected_data += serial_data[i];
+                }
+                if (serial_data[i] == '\n'){
+                    ParseDataASCII(collected_data);
+                    freq++;
+                    parser_case = 0;
+                    collected_data.clear();
+                }
+                break;
+        }
+    }
 }
