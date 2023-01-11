@@ -35,6 +35,8 @@
 #define ACCEL_SCALE_FACTOR (400 / (pow(2, 31)))
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
 
+extern int freq;
+
 class ClapB7Driver : public rclcpp::Node
 {
 public:
@@ -83,6 +85,6 @@ private:
     libntrip::NtripClient ntripClient;
     int t_size;
     const float g_ = 9.81f;
-    int freq = 0;
+
     rclcpp::TimerBase::SharedPtr timer_;
 };

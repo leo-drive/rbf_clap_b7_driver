@@ -11,6 +11,8 @@ using namespace chrono_literals;
 using rcl_interfaces::msg::ParameterDescriptor;
 using rclcpp::ParameterValue;
 
+int freq = 0;
+
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
 
@@ -40,7 +42,7 @@ ClapB7Driver::ClapB7Driver()
 
       parse_type_{this->declare_parameter(
                       "parse_type",
-                      ParameterValue{"ASCII"},
+                      ParameterValue{"BINARY"},
                       ParameterDescriptor{})
                               .get<std::string>()},
 
@@ -94,6 +96,8 @@ ClapB7Driver::ClapB7Driver()
 
     serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
+
+
     if(parse_type_ == "BINARY") {
         ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
     }
@@ -126,9 +130,10 @@ string numToString (const Type &num)
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 {
-    if(data[0] == '$') {
-        parse_gpgga(data);
-    }
+
+//    if(data[0] == '$') {
+//        parse_gpgga(data);
+//    }
 
     if (parse_type_ == "ASCII") {
         ascii_data_collector(data, len);
@@ -196,33 +201,33 @@ void ClapB7Driver::ParseDataASCII(std::string serial_data) {
         clapB7Controller.clapData.extended_solution_stat= stringToNum<uint32_t>(seperated_data_.at(i++));
         clapB7Controller.clapData.time_since_update= stringToNum<uint16_t>(seperated_data_.at(i++));
 
-        clapB7Controller.clapData.imu_error= atoi((seperated_data_.at(i++).c_str()));
-        clapB7Controller.clapData.imu_type= atoi((seperated_data_.at(i++).c_str()));
-
-        clapB7Controller.clapData.z_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
-        clapB7Controller.clapData.y_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
-        clapB7Controller.clapData.x_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.z_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
-        clapB7Controller.clapData.y_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
-        clapB7Controller.clapData.x_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.gps_sat_num= atoi((seperated_data_.at(i++)).c_str());
-        clapB7Controller.clapData.bd_sat_num= atoi((seperated_data_.at(i++).c_str()));
-        clapB7Controller.clapData.glo_sat_num= atoi((seperated_data_.at(i++).c_str()));
-        clapB7Controller.clapData.gal_sat_num= atoi(seperated_data_.at(i++).c_str());
-
-        clapB7Controller.clapData.rtk_delay= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.gdop= stringToNum<float>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.remain_float_1= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.remain_float_2= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.remain_double= stringToNum<double>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.remain_char_1= atoi((seperated_data_.at(i++).c_str()));
-        clapB7Controller.clapData.remain_char_2= atoi((seperated_data_.at(i++).c_str()));
-        clapB7Controller.clapData.remain_char_3= atoi((seperated_data_.at(i++).c_str()));
-        clapB7Controller.clapData.remain_char_4= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.imu_error= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.imu_type= atoi((seperated_data_.at(i++).c_str()));
+//
+//        clapB7Controller.clapData.z_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.y_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.x_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
+//
+//        clapB7Controller.clapData.z_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.y_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.x_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
+//
+//        clapB7Controller.clapData.gps_sat_num= atoi((seperated_data_.at(i++)).c_str());
+//        clapB7Controller.clapData.bd_sat_num= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.glo_sat_num= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.gal_sat_num= atoi(seperated_data_.at(i++).c_str());
+//
+//        clapB7Controller.clapData.rtk_delay= stringToNum<float>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.gdop= stringToNum<float>(seperated_data_.at(i++));
+//
+//        clapB7Controller.clapData.remain_float_1= stringToNum<float>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.remain_float_2= stringToNum<float>(seperated_data_.at(i++));
+//        clapB7Controller.clapData.remain_double= stringToNum<double>(seperated_data_.at(i++));
+//
+//        clapB7Controller.clapData.remain_char_1= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.remain_char_2= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.remain_char_3= atoi((seperated_data_.at(i++).c_str()));
+//        clapB7Controller.clapData.remain_char_4= atoi((seperated_data_.at(i++).c_str()));
 
         pub_ClapB7Data();
     }
@@ -269,35 +274,35 @@ void ClapB7Driver::pub_ClapB7Data() {
     msg_clap_data.set__extended_solution_stat(static_cast<uint32_t>(clapB7Controller.clapData.extended_solution_stat));
     msg_clap_data.set__time_since_update(static_cast<uint16_t>(clapB7Controller.clapData.time_since_update));
 
-    msg_clap_data.set__imu_error(static_cast<uint8_t>(clapB7Controller.clapData.imu_error));
-    msg_clap_data.set__imu_type(static_cast<uint8_t>(clapB7Controller.clapData.imu_type));
-
-
-    msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clapData.z_accel_output * ACCEL_SCALE_FACTOR));
-    msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clapData.y_accel_output * (- ACCEL_SCALE_FACTOR)));
-    msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clapData.x_accel_output * ACCEL_SCALE_FACTOR));
-
-    msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.x_gyro_output * GYRO_SCALE_FACTOR));
-    msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.y_gyro_output * ( - GYRO_SCALE_FACTOR)));
-    msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.z_gyro_output * GYRO_SCALE_FACTOR));
-
-    msg_clap_data.set__gps_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gps_sat_num));
-    msg_clap_data.set__bd_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.bd_sat_num));
-    msg_clap_data.set__glo_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.glo_sat_num));
-    msg_clap_data.set__gal_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gal_sat_num));
-
-    msg_clap_data.set__rtk_delay(static_cast<float>(clapB7Controller.clapData.rtk_delay));
-    msg_clap_data.set__gdop(static_cast<float>(clapB7Controller.clapData.gdop));
-
-    msg_clap_data.set__remain_float_1(static_cast<float>(clapB7Controller.clapData.remain_float_1));
-    msg_clap_data.set__remain_float_2(static_cast<float>(clapB7Controller.clapData.remain_float_2));
-
-    msg_clap_data.set__remain_double(static_cast<double>(clapB7Controller.clapData.remain_double));
-
-    msg_clap_data.set__remain_char_1(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_1));
-    msg_clap_data.set__remain_char_2(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_2));
-    msg_clap_data.set__remain_char_3(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_3));
-    msg_clap_data.set__remain_char_4(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_4));
+//    msg_clap_data.set__imu_error(static_cast<uint8_t>(clapB7Controller.clapData.imu_error));
+//    msg_clap_data.set__imu_type(static_cast<uint8_t>(clapB7Controller.clapData.imu_type));
+//
+//
+//    msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clapData.z_accel_output * ACCEL_SCALE_FACTOR));
+//    msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clapData.y_accel_output * (- ACCEL_SCALE_FACTOR)));
+//    msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clapData.x_accel_output * ACCEL_SCALE_FACTOR));
+//
+//    msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.x_gyro_output * GYRO_SCALE_FACTOR));
+//    msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.y_gyro_output * ( - GYRO_SCALE_FACTOR)));
+//    msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.z_gyro_output * GYRO_SCALE_FACTOR));
+//
+//    msg_clap_data.set__gps_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gps_sat_num));
+//    msg_clap_data.set__bd_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.bd_sat_num));
+//    msg_clap_data.set__glo_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.glo_sat_num));
+//    msg_clap_data.set__gal_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gal_sat_num));
+//
+//    msg_clap_data.set__rtk_delay(static_cast<float>(clapB7Controller.clapData.rtk_delay));
+//    msg_clap_data.set__gdop(static_cast<float>(clapB7Controller.clapData.gdop));
+//
+//    msg_clap_data.set__remain_float_1(static_cast<float>(clapB7Controller.clapData.remain_float_1));
+//    msg_clap_data.set__remain_float_2(static_cast<float>(clapB7Controller.clapData.remain_float_2));
+//
+//    msg_clap_data.set__remain_double(static_cast<double>(clapB7Controller.clapData.remain_double));
+//
+//    msg_clap_data.set__remain_char_1(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_1));
+//    msg_clap_data.set__remain_char_2(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_2));
+//    msg_clap_data.set__remain_char_3(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_3));
+//    msg_clap_data.set__remain_char_4(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_4));
 
     pub_clap_data_->publish(msg_clap_data);
 
@@ -314,7 +319,7 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
 
     msg_nav_sat_fix.status.set__status(0);
-    msg_nav_sat_fix.status.set__service(clapB7Controller.clapData.glo_sat_num + clapB7Controller.clapData.bd_sat_num + clapB7Controller.clapData.gal_sat_num + clapB7Controller.clapData.gps_sat_num);
+//    msg_nav_sat_fix.status.set__service(clapB7Controller.clapData.glo_sat_num + clapB7Controller.clapData.bd_sat_num + clapB7Controller.clapData.gal_sat_num + clapB7Controller.clapData.gps_sat_num);
 
     msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clapData.latitude));
     msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
@@ -341,13 +346,13 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_imu.orientation.set__y(static_cast<double>(quart_orient.getY()));
     msg_imu.orientation.set__z(static_cast<double>(quart_orient.getZ()));
 
-    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clapData.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clapData.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clapData.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-
-    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clapData.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
-    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clapData.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
-    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clapData.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
+//    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clapData.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+//    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clapData.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+//    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clapData.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+//
+//    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clapData.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
+//    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clapData.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
+//    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clapData.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
 
 
     pub_imu_->publish(msg_imu);
@@ -370,7 +375,7 @@ int ClapB7Driver::NTRIP_client_start()
   ntripClient.set_location(41.018893949, 28.890924848);
 
   ntripClient.set_report_interval(0.001);
-    ntrip_status_ = ntripClient.Run();
+  ntrip_status_ = ntripClient.Run();
 }
 
 void ClapB7Driver::parse_gpgga(const char* data) {

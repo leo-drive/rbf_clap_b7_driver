@@ -6,6 +6,7 @@
  */
 
 #include <ClapB7BinaryParser.h>
+#include "ClapB7Driver.hpp"
 #include <cstring>
 #include <iostream>
 
@@ -153,13 +154,16 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 			case CLAP_B7_DATA_ADD :
 			{
                 p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
-				if(p_Controller->dataIndex >= p_Controller->header.msgLen + HEADER_LEN + CRC_LEN)
+				if(p_Controller->dataIndex >= p_Controller->header.messageLen + HEADER_LEN + CRC_LEN)
 				{
 					uint32_t crc;
-					memcpy((uint8_t *)&(crc), (uint8_t*)(p_Controller->rawData + p_Controller->header.msgLen + HEADER_LEN), sizeof(uint32_t));
+					memcpy((uint8_t *)&(crc), (uint8_t*)(p_Controller->rawData + p_Controller->header.messageLen + HEADER_LEN), sizeof(uint32_t));
 					if(CalculateCRC32(p_Controller->rawData, (int32_t)(p_Controller->dataIndex - CRC_LEN)) == crc)
                     {
-                        memcpy(&p_Controller->clapData, (p_Controller->rawData + HEADER_LEN), sizeof(ClapB7Data));
+                        freq++;
+//                        std::cout << "msgLen: " << static_cast<int>(p_Controller->header.messageLen) << "\n" ;
+//                        std::cout << "messageID: " << static_cast<int>(p_Controller->header.messageID) << "\n" ;
+                        memcpy(&p_Controller->clapData, (p_Controller->rawData + HEADER_LEN), sizeof(ClapB7_InspvaxMsgs_));
                         p_Controller->Parser();
                     }
                     else{

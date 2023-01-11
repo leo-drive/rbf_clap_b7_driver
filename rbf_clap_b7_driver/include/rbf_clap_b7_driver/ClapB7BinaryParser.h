@@ -7,13 +7,13 @@
 #include <cstdint>
 #include <functional>
 
-#define HEADER_LEN 	 	24U
+#define HEADER_LEN 	 	28U
 #define CRC_LEN			 4U
 #define MAX_DATA_LEN 	512U
 
 #define FIRST_SYNCH		0xAAU
 #define SECOND_SYNCH	0x44U
-#define THIRD_SYNCH		0xB5U
+#define THIRD_SYNCH		0x12U
 
 
 typedef enum
@@ -32,20 +32,49 @@ typedef struct
     uint8_t SYNCH1;
     uint8_t SYNCH2;
     uint8_t SYNCH3;
-    uint8_t cpuIDLE;
+    uint8_t headerLength;
     uint16_t messageID;
-    uint16_t msgLen;
-    uint8_t timeRef;
+    uint8_t messageType;
+    uint8_t portAddress;
+    uint16_t messageLen;
+    uint16_t sequence;
+    uint8_t idleTime;
     uint8_t timeStatus;
     uint16_t refWeekNumber;
     uint32_t weekMs;
-    uint32_t reserved;
-    uint8_t releaseVer;
-    uint8_t leapSec;
-    uint16_t outDelay;
+    uint32_t receiverStatus;
+    uint16_t reserved;
+    uint16_t receiverSwVer;
 }ClapB7Header;
 
-struct __attribute__((packed)) ClapB7Data {
+struct __attribute__((packed)) ClapB7_InspvaxMsgs_ {
+    uint32_t ins_status;
+    uint32_t pos_type;
+    double latitude;
+    double longitude;
+    double height;
+    float undulation;
+    double north_velocity;
+    double east_velocity;
+    double up_velocity;
+    double roll;
+    double pitch;
+    double azimuth;
+    float std_dev_latitude;
+    float std_dev_longitude;
+    float std_dev_height;
+    float std_dev_north_velocity;
+    float std_dev_east_velocity;
+    float std_dev_up_velocity;
+    float std_dev_roll;
+    float std_dev_pitch;
+    float std_dev_azimuth;
+    uint32_t extended_solution_stat;
+    uint16_t time_since_update;
+
+};
+
+struct __attribute__((packed)) ClapB7_InteresultMsgs_ {
     uint32_t ins_status;
     uint32_t pos_type;
     double latitude;
@@ -99,7 +128,7 @@ typedef struct
     ClapB7ParseStatus status;
     ClapB7Header header;
     uint8_t rawData[MAX_DATA_LEN];
-    ClapB7Data clapData;
+    ClapB7_InspvaxMsgs_ clapData;
     std::function<void()> Parser;
 } ClapB7Controller;
 
