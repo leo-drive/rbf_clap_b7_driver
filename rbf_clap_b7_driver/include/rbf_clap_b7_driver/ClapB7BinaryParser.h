@@ -15,12 +15,16 @@
 #define SECOND_SYNCH	0x44U
 #define THIRD_SYNCH		0x12U
 
+#define RAWIMU_MSG_ID    268U
+#define INSPVAX_MSG_ID   1465U
+
 
 typedef enum
 {
     SYNCH1_CONTROL,
     SYNCH2_CONTROL,
     SYNCH3_CONTROL,
+    CLAP_B7_HEADER_LENGTH,
     CLAP_B7_HEADER_ADD,
     CLAP_B7_DATA_ADD,
 }ClapB7ParseStatus;
@@ -122,6 +126,19 @@ struct __attribute__((packed)) ClapB7_InteresultMsgs_ {
     int crc;
 };
 
+struct __attribute__((packed)) ClapB7_RawimuMsgs_ {
+    uint32_t gnssWeek;
+    double  secondsIntoWeek;
+    uint32_t imu_status;
+    int32_t z_accel_output;
+    int32_t y_accel_output;
+    int32_t x_accel_output;
+    int32_t z_gyro_output;
+    int32_t y_gyro_output;
+    int32_t x_gyro_output;
+    int crc;
+};
+
 typedef struct
 {
     uint16_t dataIndex;
@@ -129,6 +146,7 @@ typedef struct
     ClapB7Header header;
     uint8_t rawData[MAX_DATA_LEN];
     ClapB7_InspvaxMsgs_ clapData;
+    ClapB7_RawimuMsgs_  clap_RawimuMsgs;
     std::function<void()> Parser;
 } ClapB7Controller;
 

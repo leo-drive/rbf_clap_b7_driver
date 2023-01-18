@@ -36,6 +36,8 @@
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
 
 extern int freq;
+extern int freq_rawimu;
+extern int freq_inspvax;
 
 class ClapB7Driver : public rclcpp::Node
 {

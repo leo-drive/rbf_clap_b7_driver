@@ -12,6 +12,8 @@ using rcl_interfaces::msg::ParameterDescriptor;
 using rclcpp::ParameterValue;
 
 int freq = 0;
+int freq_rawimu = 0;
+int freq_inspvax = 0;
 
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
@@ -145,7 +147,11 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 
 void ClapB7Driver::timer_callback() {
     printf("timer = %d\n", freq);
+    printf("freq_rawimu = %d\n", freq_rawimu);
+    printf("freq_inspvax = %d\n", freq_inspvax);
     freq = 0;
+    freq_rawimu = 0;
+    freq_inspvax = 0;
 }
 
 void ClapB7Driver::ParseDataASCII(std::string serial_data) {
@@ -278,13 +284,13 @@ void ClapB7Driver::pub_ClapB7Data() {
 //    msg_clap_data.set__imu_type(static_cast<uint8_t>(clapB7Controller.clapData.imu_type));
 //
 //
-//    msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clapData.z_accel_output * ACCEL_SCALE_FACTOR));
-//    msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clapData.y_accel_output * (- ACCEL_SCALE_FACTOR)));
-//    msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clapData.x_accel_output * ACCEL_SCALE_FACTOR));
-//
-//    msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.x_gyro_output * GYRO_SCALE_FACTOR));
-//    msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.y_gyro_output * ( - GYRO_SCALE_FACTOR)));
-//    msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clapData.z_gyro_output * GYRO_SCALE_FACTOR));
+    msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR));
+    msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_accel_output * (- ACCEL_SCALE_FACTOR)));
+    msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_accel_output * ACCEL_SCALE_FACTOR));
+
+    msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * GYRO_SCALE_FACTOR));
+    msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * ( - GYRO_SCALE_FACTOR)));
+    msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR));
 //
 //    msg_clap_data.set__gps_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gps_sat_num));
 //    msg_clap_data.set__bd_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.bd_sat_num));
@@ -346,13 +352,13 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_imu.orientation.set__y(static_cast<double>(quart_orient.getY()));
     msg_imu.orientation.set__z(static_cast<double>(quart_orient.getZ()));
 
-//    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clapData.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-//    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clapData.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-//    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clapData.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-//
-//    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clapData.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
-//    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clapData.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
-//    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clapData.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
+    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+
+    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
+    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
+    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
 
 
     pub_imu_->publish(msg_imu);

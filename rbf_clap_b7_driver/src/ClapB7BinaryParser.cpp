@@ -124,7 +124,7 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 				if(THIRD_SYNCH == p_Data[i])
 				{
 					p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
-					p_Controller->status = CLAP_B7_HEADER_ADD;
+					p_Controller->status = CLAP_B7_HEADER_LENGTH;
 				}
 				else if(FIRST_SYNCH == p_Data[i])
 				{
@@ -140,12 +140,20 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 				break;
 			}
 
+            case CLAP_B7_HEADER_LENGTH :
+            {
+                p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
+                p_Controller->header.headerLength = p_Data[i];
+                p_Controller->status = CLAP_B7_HEADER_ADD;
+                break;
+            }
+
 			case CLAP_B7_HEADER_ADD :
 			{
 				p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
-				if(p_Controller->dataIndex >= HEADER_LEN)
+				if(p_Controller->dataIndex >= p_Controller->header.headerLength)
 				{
-					memcpy((uint8_t*)&(p_Controller->header), (p_Controller->rawData), sizeof(ClapB7Header));
+					memcpy((uint8_t*)(&(p_Controller->header)), (p_Controller->rawData), sizeof(ClapB7Header));
 					p_Controller->status = CLAP_B7_DATA_ADD;
 				}
 				break;
@@ -154,16 +162,27 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 			case CLAP_B7_DATA_ADD :
 			{
                 p_Controller->rawData[p_Controller->dataIndex++] = p_Data[i];
-				if(p_Controller->dataIndex >= p_Controller->header.messageLen + HEADER_LEN + CRC_LEN)
+				if(p_Controller->dataIndex >= p_Controller->header.messageLen + p_Controller->header.headerLength + CRC_LEN)
 				{
 					uint32_t crc;
-					memcpy((uint8_t *)&(crc), (uint8_t*)(p_Controller->rawData + p_Controller->header.messageLen + HEADER_LEN), sizeof(uint32_t));
+					memcpy((uint8_t *)&(crc), (uint8_t*)(p_Controller->rawData + p_Controller->header.messageLen + p_Controller->header.headerLength), sizeof(uint32_t));
 					if(CalculateCRC32(p_Controller->rawData, (int32_t)(p_Controller->dataIndex - CRC_LEN)) == crc)
                     {
                         freq++;
 //                        std::cout << "msgLen: " << static_cast<int>(p_Controller->header.messageLen) << "\n" ;
 //                        std::cout << "messageID: " << static_cast<int>(p_Controller->header.messageID) << "\n" ;
-                        memcpy(&p_Controller->clapData, (p_Controller->rawData + HEADER_LEN), sizeof(ClapB7_InspvaxMsgs_));
+
+
+                        if(p_Controller->header.messageID == RAWIMU_MSG_ID)
+                        {
+                            freq_rawimu++;
+                            memcpy(&p_Controller->clap_RawimuMsgs, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_RawimuMsgs_));
+                        }
+                        else if(p_Controller->header.messageID == INSPVAX_MSG_ID)
+                        {
+                            freq_inspvax++;
+                            memcpy(&p_Controller->clapData, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_InspvaxMsgs_));
+                        }
                         p_Controller->Parser();
                     }
                     else{
