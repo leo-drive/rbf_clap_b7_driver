@@ -11,40 +11,35 @@ using namespace chrono_literals;
 using rcl_interfaces::msg::ParameterDescriptor;
 using rclcpp::ParameterValue;
 
-int freq = 0;
 int freq_rawimu = 0;
 int freq_inspvax = 0;
 
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
 
+    // General Clap Data Topic
       clap_data_topic_{this->declare_parameter(
                       "clap_imu_data",
                       ParameterValue{"/clap_b7_data"},
                       ParameterDescriptor{})
                               .get<std::string>()},
-
+    // Std. imu topic
       imu_topic_{this->declare_parameter(
                       "imu_topic",
                       ParameterValue{"/std_imu_data"},
                       ParameterDescriptor{})
                                .get<std::string>()},
-
+    // std. msgs
       nav_sat_fix_topic_{this->declare_parameter(
                       "nav_sat_fix_topic",
                       ParameterValue{"/std_nav_sat_fix"},
                       ParameterDescriptor{})
                          .get<std::string>()},
 
+    // Serial port config
       serial_name_{this->declare_parameter(
                       "serial_name",
                       ParameterValue{"/dev/ttyUSB0"},
-                      ParameterDescriptor{})
-                              .get<std::string>()},
-
-      parse_type_{this->declare_parameter(
-                      "parse_type",
-                      ParameterValue{"BINARY"},
                       ParameterDescriptor{})
                               .get<std::string>()},
 
@@ -56,31 +51,39 @@ ClapB7Driver::ClapB7Driver()
 
       serial_boost(serial_name_, baud_rate_),
 
-      ntrip_server_ip_{this->declare_parameter("ntrip_ip",
-                                               ParameterValue("212.156.70.42"),
-                                               ParameterDescriptor{})
-                               .get<std::string>()},
+      /*
+       * NTRIP Config
+       * If NTRIP will bi used set the function parameters.
+       * NTRIP ip, NTRIP username, NTRIP password, NTRIP mount point and NTRIP port
+       * */
+//      ntrip_server_ip_{this->declare_parameter("ntrip_ip",
+//                                               ParameterValue("xxx.xxx.xx.xx"),
+//                                               ParameterDescriptor{})
+//                               .get<std::string>()},
+//
+//      username_{this->declare_parameter("ntrip_username",
+//                                        ParameterValue("x"),
+//                                        ParameterDescriptor{})
+//                        .get<std::string>()},
+//
+//      password_{this->declare_parameter("ntrip_password",
+//                                        ParameterValue("x"),
+//                                        ParameterDescriptor{})
+//                        .get<std::string>()},
+//
+//      mount_point_{this->declare_parameter("ntrip_mount_point",
+//                                           ParameterValue("x"),
+//                                           ParameterDescriptor{})
+//                           .get<std::string>()},
+//
+//      ntrip_port_{static_cast<int>(this->declare_parameter("ntrip_port",
+//                                                           ParameterValue(1111),
+//                                                           ParameterDescriptor{})
+//                                                           .get<int>())},
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-      username_{this->declare_parameter("ntrip_username",
-                                        ParameterValue("K073432501"),
-                                        ParameterDescriptor{})
-                        .get<std::string>()},
-
-      password_{this->declare_parameter("ntrip_password",
-                                        ParameterValue("GR3g4"),
-                                        ParameterDescriptor{})
-                        .get<std::string>()},
-
-      mount_point_{this->declare_parameter("ntrip_mount_point",
-                                           ParameterValue("VRSRTCM31"),
-                                           ParameterDescriptor{})
-                           .get<std::string>()},
-
-      ntrip_port_{static_cast<int>(this->declare_parameter("ntrip_port",
-                                                           ParameterValue(2101),
-                                                           ParameterDescriptor{})
-                                                           .get<int>())},
-
+    // Publisher
       pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
               clap_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
@@ -90,162 +93,43 @@ ClapB7Driver::ClapB7Driver()
       pub_nav_sat_fix_{create_publisher<sensor_msgs::msg::NavSatFix>(
               nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
+    // Timer
       timer_{this->create_wall_timer(
             1000ms, std::bind(&ClapB7Driver::timer_callback, this))}
 
 {
     using namespace std::placeholders;
 
+    // Set serial callback
     serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
+    // Init ClapB7
+    ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
 
-
-    if(parse_type_ == "BINARY") {
-        ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
-    }
-    else if(parse_type_ != "ASCII"){
-        RCLCPP_ERROR(this->get_logger(), "PARSE TYPE DOESN'T MATCH ANY FORMAT, USE 'ASCII' OR 'BINARY' INSTEAD");
-        exit(-1);
-    }
-    NTRIP_client_start();
-}
-
-template <typename Type>
-Type stringToNum(const string &str)
-{
-    istringstream iss(str);
-    Type num;
-    iss >> num;
-    return num;
-}
-
-template <typename Type>
-string numToString (const Type &num)
-{
-    stringstream ss;
-    string s;
-
-    ss << num;
-    s = ss.str();
-    return s;
+    /*
+     * If NTRIP will be used uncomment this function.
+     * */
+//    NTRIP_client_start();
 }
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 {
-
-//    if(data[0] == '$') {
-//        parse_gpgga(data);
-//    }
-
-    if (parse_type_ == "ASCII") {
-        ascii_data_collector(data, len);
-    }
-    else{
-        ClapB7Parser(&clapB7Controller, reinterpret_cast<const uint8_t *>(data), len);
-    }
+    ClapB7Parser(&clapB7Controller, reinterpret_cast<const uint8_t *>(data), len);
 }
 
 void ClapB7Driver::timer_callback() {
-    printf("timer = %d\n", freq);
-    printf("freq_rawimu = %d\n", freq_rawimu);
-    printf("freq_inspvax = %d\n", freq_inspvax);
-    freq = 0;
+
+    printf("freq_rawimu_hz = %d\n", freq_rawimu);
+    printf("freq_inspvax_hz = %d\n", freq_inspvax);
+
     freq_rawimu = 0;
     freq_inspvax = 0;
-}
-
-void ClapB7Driver::ParseDataASCII(std::string serial_data) {
-
-
-    string raw_serial_data = numToString(serial_data);
-
-    std::string delimiter = ",";
-
-    size_t pos = 0;
-    std::string token;
-
-    int header_pos = raw_serial_data.find(';');
-    header_ = raw_serial_data.substr(0, header_pos);
-    header_ = header_.substr(0, header_.find(','));
-    raw_serial_data.erase(0, header_pos + delimiter.length());
-
-    while ((pos = raw_serial_data.find(delimiter)) != std::string::npos) {
-        token = raw_serial_data.substr(0, pos);
-        seperated_data_.push_back(token);
-        raw_serial_data.erase(0, pos + delimiter.length());
-    }
-    seperated_data_.push_back(raw_serial_data);
-
-    if (header_ == "INTERESULTA") {
-        int i = 0;
-        clapB7Controller.clapData.ins_status= stringToNum<uint32_t>(seperated_data_.at(i++));
-        clapB7Controller.clapData.pos_type= stringToNum<uint32_t>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.latitude= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.longitude= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.height= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.undulation= stringToNum<float>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.north_velocity= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.east_velocity= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.up_velocity= stringToNum<double>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.roll= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.pitch= stringToNum<double>(seperated_data_.at(i++));
-        clapB7Controller.clapData.azimuth= stringToNum<double>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.std_dev_latitude= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_longitude= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_height= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_north_velocity= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_east_velocity= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_up_velocity= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_roll= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_pitch= stringToNum<float>(seperated_data_.at(i++));
-        clapB7Controller.clapData.std_dev_azimuth= stringToNum<float>(seperated_data_.at(i++));
-
-        clapB7Controller.clapData.extended_solution_stat= stringToNum<uint32_t>(seperated_data_.at(i++));
-        clapB7Controller.clapData.time_since_update= stringToNum<uint16_t>(seperated_data_.at(i++));
-
-//        clapB7Controller.clapData.imu_error= atoi((seperated_data_.at(i++).c_str()));
-//        clapB7Controller.clapData.imu_type= atoi((seperated_data_.at(i++).c_str()));
-//
-//        clapB7Controller.clapData.z_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.y_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.x_accel_output= stringToNum<int32_t>(seperated_data_.at(i++));
-//
-//        clapB7Controller.clapData.z_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.y_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.x_gyro_output= stringToNum<int32_t>(seperated_data_.at(i++));
-//
-//        clapB7Controller.clapData.gps_sat_num= atoi((seperated_data_.at(i++)).c_str());
-//        clapB7Controller.clapData.bd_sat_num= atoi((seperated_data_.at(i++).c_str()));
-//        clapB7Controller.clapData.glo_sat_num= atoi((seperated_data_.at(i++).c_str()));
-//        clapB7Controller.clapData.gal_sat_num= atoi(seperated_data_.at(i++).c_str());
-//
-//        clapB7Controller.clapData.rtk_delay= stringToNum<float>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.gdop= stringToNum<float>(seperated_data_.at(i++));
-//
-//        clapB7Controller.clapData.remain_float_1= stringToNum<float>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.remain_float_2= stringToNum<float>(seperated_data_.at(i++));
-//        clapB7Controller.clapData.remain_double= stringToNum<double>(seperated_data_.at(i++));
-//
-//        clapB7Controller.clapData.remain_char_1= atoi((seperated_data_.at(i++).c_str()));
-//        clapB7Controller.clapData.remain_char_2= atoi((seperated_data_.at(i++).c_str()));
-//        clapB7Controller.clapData.remain_char_3= atoi((seperated_data_.at(i++).c_str()));
-//        clapB7Controller.clapData.remain_char_4= atoi((seperated_data_.at(i++).c_str()));
-
-        pub_ClapB7Data();
-    }
-    else {
-        RCLCPP_WARN(this->get_logger(), "Received data doesn't match with any header");
-    }
-    seperated_data_.clear();
 }
 
 void ClapB7Driver::pub_ClapB7Data() {
 
     rbf_clap_b7_msgs::msg::ClapData msg_clap_data;
+
     msg_clap_data.set__ins_status(static_cast<uint32_t>(clapB7Controller.clapData.ins_status));
     msg_clap_data.set__pos_type(static_cast<uint32_t>(clapB7Controller.clapData.pos_type));
 
@@ -280,10 +164,8 @@ void ClapB7Driver::pub_ClapB7Data() {
     msg_clap_data.set__extended_solution_stat(static_cast<uint32_t>(clapB7Controller.clapData.extended_solution_stat));
     msg_clap_data.set__time_since_update(static_cast<uint16_t>(clapB7Controller.clapData.time_since_update));
 
-//    msg_clap_data.set__imu_error(static_cast<uint8_t>(clapB7Controller.clapData.imu_error));
-//    msg_clap_data.set__imu_type(static_cast<uint8_t>(clapB7Controller.clapData.imu_type));
-//
-//
+    msg_clap_data.set__imu_status(static_cast<uint8_t>(clapB7Controller.clap_RawimuMsgs.imu_status));
+
     msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR));
     msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_accel_output * (- ACCEL_SCALE_FACTOR)));
     msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_accel_output * ACCEL_SCALE_FACTOR));
@@ -291,24 +173,6 @@ void ClapB7Driver::pub_ClapB7Data() {
     msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * GYRO_SCALE_FACTOR));
     msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * ( - GYRO_SCALE_FACTOR)));
     msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR));
-//
-//    msg_clap_data.set__gps_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gps_sat_num));
-//    msg_clap_data.set__bd_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.bd_sat_num));
-//    msg_clap_data.set__glo_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.glo_sat_num));
-//    msg_clap_data.set__gal_sat_num(static_cast<uint8_t>(clapB7Controller.clapData.gal_sat_num));
-//
-//    msg_clap_data.set__rtk_delay(static_cast<float>(clapB7Controller.clapData.rtk_delay));
-//    msg_clap_data.set__gdop(static_cast<float>(clapB7Controller.clapData.gdop));
-//
-//    msg_clap_data.set__remain_float_1(static_cast<float>(clapB7Controller.clapData.remain_float_1));
-//    msg_clap_data.set__remain_float_2(static_cast<float>(clapB7Controller.clapData.remain_float_2));
-//
-//    msg_clap_data.set__remain_double(static_cast<double>(clapB7Controller.clapData.remain_double));
-//
-//    msg_clap_data.set__remain_char_1(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_1));
-//    msg_clap_data.set__remain_char_2(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_2));
-//    msg_clap_data.set__remain_char_3(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_3));
-//    msg_clap_data.set__remain_char_4(static_cast<uint8_t>(clapB7Controller.clapData.remain_char_4));
 
     pub_clap_data_->publish(msg_clap_data);
 
@@ -325,7 +189,6 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
 
     msg_nav_sat_fix.status.set__status(0);
-//    msg_nav_sat_fix.status.set__service(clapB7Controller.clapData.glo_sat_num + clapB7Controller.clapData.bd_sat_num + clapB7Controller.clapData.gal_sat_num + clapB7Controller.clapData.gps_sat_num);
 
     msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clapData.latitude));
     msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
@@ -341,7 +204,6 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_imu.header.set__frame_id(static_cast<std::string>("std_msgs_frame"));
     msg_imu.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
     msg_imu.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
-
 
     tf2::Quaternion quart_orient;
     quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
@@ -359,7 +221,6 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
     msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
     msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
-
 
     pub_imu_->publish(msg_imu);
     pub_nav_sat_fix_->publish(msg_nav_sat_fix);
@@ -382,84 +243,4 @@ int ClapB7Driver::NTRIP_client_start()
 
   ntripClient.set_report_interval(0.001);
   ntrip_status_ = ntripClient.Run();
-}
-
-void ClapB7Driver::parse_gpgga(const char* data) {
-    string raw_serial_data = numToString(data);
-
-    std::string delimiter = ",";
-
-    size_t pos = 0;
-    std::string token;
-
-    int header_pos = raw_serial_data.find(';');
-    header_ = raw_serial_data.substr(0, header_pos);
-    header_ = header_.substr(0, header_.find(','));
-    raw_serial_data.erase(0, header_pos + delimiter.length());
-
-    while ((pos = raw_serial_data.find(delimiter)) != std::string::npos) {
-        token = raw_serial_data.substr(0, pos);
-        seperated_data_.push_back(token);
-        raw_serial_data.erase(0, pos + delimiter.length());
-    }
-    seperated_data_.push_back(raw_serial_data);
-    if(seperated_data_.at(4) == "0") {
-        ntripClient.set_location(clapB7Controller.clapData.latitude, clapB7Controller.clapData.longitude);
-    }
-}
-
-void ClapB7Driver::ascii_data_collector(const char* serial_data, int len) {
-    static int parser_case = 0;
-    static std::string collected_data;
-
-    for (int i = 0; i < len; ++i) {
-        switch (parser_case) {
-            case 0:
-                if (serial_data[i] == '#') {
-                    parser_case++;
-                }
-                else if(serial_data[i] == '$') {
-                    std::string gpgga;
-                    std::string gpgga_symbol;
-                    std::vector<std::string> gpgga_vector;
-                    for (int j = 0; j < 100; ++j) {
-                        if (serial_data[i + j] != '\r') {
-                            gpgga += serial_data[i + j];
-                        }
-                        else{
-//                            for (int k = 0; k < 7; ++k) {
-//                                int pos = gpgga.find(',');
-//
-//                                gpgga_symbol = gpgga.substr(0, pos);
-//                                gpgga_vector.push_back(gpgga_symbol)
-//                            }
-//                            if (gpgga_symbol.at(7) != "0") {
-//
-//                            }
-                            if (ntrip_status_ == 1) {
-                                ntripClient.set_gga_buffer(gpgga);
-                                printf("status = %d\n", ntrip_status_);
-                            }
-
-                            parser_case = 0;
-
-                            break;
-                        }
-                    }
-                }
-            break;
-
-            case 1:
-                if (serial_data[i] != '\r') {
-                    collected_data += serial_data[i];
-                }
-                if (serial_data[i] == '\n'){
-                    ParseDataASCII(collected_data);
-                    freq++;
-                    parser_case = 0;
-                    collected_data.clear();
-                }
-                break;
-        }
-    }
 }

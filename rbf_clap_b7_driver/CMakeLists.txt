@@ -8,10 +8,13 @@ endif()
 include_directories(include/rbf_clap_b7_driver)
 include_directories(rbf_clap_b7_msgs)
 
+
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(rbf_clap_b7_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(nmea_msgs REQUIRED)
@@ -56,6 +59,7 @@ ament_target_dependencies(rbf_clap_b7_driver_exe
         sensor_msgs
         nav_msgs
         nmea_msgs
+        tf2
         )
 
 install(TARGETS

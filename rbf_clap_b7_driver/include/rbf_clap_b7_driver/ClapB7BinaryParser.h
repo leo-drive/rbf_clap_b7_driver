@@ -78,54 +78,6 @@ struct __attribute__((packed)) ClapB7_InspvaxMsgs_ {
 
 };
 
-struct __attribute__((packed)) ClapB7_InteresultMsgs_ {
-    uint32_t ins_status;
-    uint32_t pos_type;
-    double latitude;
-    double longitude;
-    double height;
-    float undulation;
-    double north_velocity;
-    double east_velocity;
-    double up_velocity;
-    double roll;
-    double pitch;
-    double azimuth;
-    float std_dev_latitude;
-    float std_dev_longitude;
-    float std_dev_height;
-    float std_dev_north_velocity;
-    float std_dev_east_velocity;
-    float std_dev_up_velocity;
-    float std_dev_roll;
-    float std_dev_pitch;
-    float std_dev_azimuth;
-    uint32_t extended_solution_stat;
-    uint16_t time_since_update;
-    uint8_t imu_error;
-    uint8_t imu_type;
-    int32_t z_accel_output;
-    int32_t y_accel_output;
-    int32_t x_accel_output;
-    int32_t z_gyro_output;
-    int32_t y_gyro_output;
-    int32_t x_gyro_output;
-    uint8_t gps_sat_num;
-    uint8_t bd_sat_num;
-    uint8_t glo_sat_num;
-    uint8_t gal_sat_num;
-    float rtk_delay;
-    float gdop;
-    float remain_float_1;
-    float remain_float_2;
-    double remain_double;
-    unsigned char remain_char_1;
-    unsigned char remain_char_2;
-    unsigned char remain_char_3;
-    unsigned char remain_char_4;
-    int crc;
-};
-
 struct __attribute__((packed)) ClapB7_RawimuMsgs_ {
     uint32_t gnssWeek;
     double  secondsIntoWeek;

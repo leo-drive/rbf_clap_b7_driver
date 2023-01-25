@@ -25,6 +25,7 @@
 #include "geometry_msgs/msg/quaternion.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 
+
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
 
@@ -35,7 +36,6 @@
 #define ACCEL_SCALE_FACTOR (400 / (pow(2, 31)))
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
 
-extern int freq;
 extern int freq_rawimu;
 extern int freq_inspvax;
 
@@ -53,18 +53,15 @@ public:
 private:
     
     void timer_callback();
-    void ParseDataASCII(std::string serial_data);
     void pub_ClapB7Data();
     int NTRIP_client_start();
     void publish_standart_msgs();
-    void parse_gpgga(const char* data);
-    void ascii_data_collector(const char* serial_data, int len);
+
 
     std::string clap_data_topic_;
     std::string imu_topic_;
     std::string nav_sat_fix_topic_;
     std::string serial_name_;
-    std::string parse_type_;
     std::string ntrip_server_ip_;
     std::string username_;
     std::string password_;

@@ -79,7 +79,6 @@ void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> call
     p_Controller->Parser = callBack;
 }
 
-
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len)
 {
 	int i;
@@ -168,10 +167,6 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
 					memcpy((uint8_t *)&(crc), (uint8_t*)(p_Controller->rawData + p_Controller->header.messageLen + p_Controller->header.headerLength), sizeof(uint32_t));
 					if(CalculateCRC32(p_Controller->rawData, (int32_t)(p_Controller->dataIndex - CRC_LEN)) == crc)
                     {
-                        freq++;
-//                        std::cout << "msgLen: " << static_cast<int>(p_Controller->header.messageLen) << "\n" ;
-//                        std::cout << "messageID: " << static_cast<int>(p_Controller->header.messageID) << "\n" ;
-
 
                         if(p_Controller->header.messageID == RAWIMU_MSG_ID)
                         {
