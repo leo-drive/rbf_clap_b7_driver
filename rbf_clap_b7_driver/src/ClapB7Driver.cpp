@@ -26,13 +26,13 @@ ClapB7Driver::ClapB7Driver()
     // Std. imu topic
       imu_topic_{this->declare_parameter(
                       "imu_topic",
-                      ParameterValue{"/std_imu_data"},
+                      ParameterValue{"/gnss/imu"},
                       ParameterDescriptor{})
                                .get<std::string>()},
     // std. msgs
       nav_sat_fix_topic_{this->declare_parameter(
                       "nav_sat_fix_topic",
-                      ParameterValue{"/std_nav_sat_fix"},
+                      ParameterValue{"/gnss/gps"},
                       ParameterDescriptor{})
                          .get<std::string>()},
 
@@ -119,8 +119,8 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 
 void ClapB7Driver::timer_callback() {
 
-    printf("freq_rawimu_hz = %d\n", freq_rawimu);
-    printf("freq_inspvax_hz = %d\n", freq_inspvax);
+    // printf("freq_rawimu_hz = %d\n", freq_rawimu);
+    // printf("freq_inspvax_hz = %d\n", freq_inspvax);
 
     freq_rawimu = 0;
     freq_inspvax = 0;
@@ -184,7 +184,7 @@ void ClapB7Driver::publish_standart_msgs() {
     sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
 
     // GNSS NavSatFix Message
-    msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("std_msgs_frame"));
+    msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("gnss"));
     msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
     msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
 
@@ -201,12 +201,30 @@ void ClapB7Driver::publish_standart_msgs() {
 
     msg_nav_sat_fix.set__position_covariance(pos_cov);
 
-    msg_imu.header.set__frame_id(static_cast<std::string>("std_msgs_frame"));
+    msg_imu.header.set__frame_id(static_cast<std::string>("gnss"));
     msg_imu.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
     msg_imu.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
 
     tf2::Quaternion quart_orient;
-    quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
+    
+    double t_roll,t_pitch,t_yaw;
+
+    t_pitch = 180 * atan (clapB7Controller.clap_RawimuMsgs.x_accel_output/
+      sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.y_accel_output,2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output,2)))/M_PI;
+      
+    
+    t_roll = 180 * atan (clapB7Controller.clap_RawimuMsgs.y_accel_output/
+      sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output,2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output,2)))/M_PI;
+    
+    t_yaw = 180 * atan (clapB7Controller.clap_RawimuMsgs.z_accel_output/
+      sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output,2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output,2)))/M_PI;
+    
+    
+    std::cout<<"Roll: "<< t_roll << std::endl;
+    std::cout<<"Pitch: "<< t_pitch << std::endl;
+    std::cout<<"Yaw: "<< clapB7Controller.clapData.azimuth << std::endl;
+    std::cout<<"-------------------" << std::endl;
+    quart_orient.setRPY(t_roll, t_pitch, clapB7Controller.clapData.azimuth);
     quart_orient.normalize();
 
     msg_imu.orientation.set__w(static_cast<double>(quart_orient.getW()));
@@ -214,13 +232,13 @@ void ClapB7Driver::publish_standart_msgs() {
     msg_imu.orientation.set__y(static_cast<double>(quart_orient.getY()));
     msg_imu.orientation.set__z(static_cast<double>(quart_orient.getZ()));
 
-    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
-    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR));
+    msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR* HZ_TO_SECOND));
+    msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR* HZ_TO_SECOND));
+    msg_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR* HZ_TO_SECOND));
 
-    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_accel_output * g_ * ACCEL_SCALE_FACTOR));
-    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * g_ * ACCEL_SCALE_FACTOR));
-    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * g_ * ACCEL_SCALE_FACTOR));
+    msg_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_accel_output * ACCEL_SCALE_FACTOR*HZ_TO_SECOND));
+    msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output  * ACCEL_SCALE_FACTOR*HZ_TO_SECOND));
+    msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output  * ACCEL_SCALE_FACTOR*HZ_TO_SECOND));
 
     pub_imu_->publish(msg_imu);
     pub_nav_sat_fix_->publish(msg_nav_sat_fix);
