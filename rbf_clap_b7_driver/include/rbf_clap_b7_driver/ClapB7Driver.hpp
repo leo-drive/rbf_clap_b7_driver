@@ -67,7 +67,7 @@ private:
     std::string username_;
     std::string password_;
     std::string mount_point_;
-
+    std::string activate_ntrip_;
     int ntrip_port_;
     long baud_rate_;
 

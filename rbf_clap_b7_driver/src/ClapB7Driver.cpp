@@ -51,37 +51,36 @@ ClapB7Driver::ClapB7Driver()
 
       serial_boost(serial_name_, baud_rate_),
 
-      /*
-       * NTRIP Config
-       * If NTRIP will bi used set the function parameters.
-       * NTRIP ip, NTRIP username, NTRIP password, NTRIP mount point and NTRIP port
-       * */
-      //      ntrip_server_ip_{this->declare_parameter("ntrip_ip",
-      //                                               ParameterValue("xxx.xxx.xx.xx"),
-      //                                               ParameterDescriptor{})
-      //                               .get<std::string>()},
-      //
-      //      username_{this->declare_parameter("ntrip_username",
-      //                                        ParameterValue("x"),
-      //                                        ParameterDescriptor{})
-      //                        .get<std::string>()},
-      //
-      //      password_{this->declare_parameter("ntrip_password",
-      //                                        ParameterValue("x"),
-      //                                        ParameterDescriptor{})
-      //                        .get<std::string>()},
-      //
-      //      mount_point_{this->declare_parameter("ntrip_mount_point",
-      //                                           ParameterValue("x"),
-      //                                           ParameterDescriptor{})
-      //                           .get<std::string>()},
-      //
-      //      ntrip_port_{static_cast<int>(this->declare_parameter("ntrip_port",
-      //                                                           ParameterValue(1111),
-      //                                                           ParameterDescriptor{})
-      //                                                           .get<int>())},
-      /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-      /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+      ntrip_server_ip_{this->declare_parameter("ntrip_ip",
+                                                     ParameterValue("212.156.70.42"),
+                                                     ParameterDescriptor{})
+                                     .get<std::string>()},
+
+      username_{this->declare_parameter("ntrip_user_name",
+                                              ParameterValue("K073432501"),
+                                              ParameterDescriptor{})
+                              .get<std::string>()},
+
+      password_{this->declare_parameter("ntrip_password",
+                                              ParameterValue("GR3g4"),
+                                              ParameterDescriptor{})
+                              .get<std::string>()},
+
+      mount_point_{this->declare_parameter("ntrip_mount_point",
+                                                 ParameterValue("VRSRTCM31"),
+                                                 ParameterDescriptor{})
+                                 .get<std::string>()},
+
+      ntrip_port_{static_cast<int>(this->declare_parameter("ntrip_port",
+                                                                 ParameterValue(2101),
+                                                                 ParameterDescriptor{})
+                                                                 .get<int>())},
+      activate_ntrip_{this->declare_parameter("activate_ntrip",
+                                              ParameterValue("true"),
+                                              ParameterDescriptor{})
+                               .get<std::string>()},
 
       // Publisher
       pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
@@ -106,10 +105,10 @@ ClapB7Driver::ClapB7Driver()
   // Init ClapB7
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
 
-  /*
-   * If NTRIP will be used uncomment this function.
-   * */
-  //    NTRIP_client_start();
+  if (activate_ntrip_ == "true") {
+    NTRIP_client_start();
+  }
+
 }
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)

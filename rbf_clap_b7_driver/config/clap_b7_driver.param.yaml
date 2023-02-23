@@ -3,3 +3,9 @@ rbf_clap_b7_driver:
     serial_name: "/dev/ttyUSB0"
     parse_type: "BINARY"
     baud_rate: 460800
+    activate_ntrip: "true"
+    ntrip_ip: "212.156.70.42"
+    ntrip_user_name: "K073432501"
+    ntrip_password: "GR3g4"
+    ntrip_mount_point: "VRSRTCM31"
+    ntrip_port: 2101
