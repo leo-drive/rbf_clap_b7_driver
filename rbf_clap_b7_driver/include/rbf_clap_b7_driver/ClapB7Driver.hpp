@@ -24,7 +24,7 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
 #include <tf2/LinearMath/Quaternion.h>
-
+#include <autoware_sensing_msgs/msg/gnss_ins_orientation_stamped.hpp>
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -67,18 +67,16 @@ private:
     std::string username_;
     std::string password_;
     std::string mount_point_;
-    std::string activate_ntrip_;
     int ntrip_port_;
+    std::string activate_ntrip_;
     long baud_rate_;
 
     CallbackAsyncSerial serial_boost;
 
-    std::vector<std::string> seperated_data_;
-    std::string header_;
-   
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_imu_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
+    rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
 
     ClapB7Controller clapB7Controller;
     uint8_t ntrip_status_ = 0;

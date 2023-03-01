@@ -18,6 +18,7 @@ find_package(tf2 REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(nmea_msgs REQUIRED)
+find_package(autoware_sensing_msgs REQUIRED)
 
 
 set(CLAP_B7_DRIVER_LIB_SRC
@@ -60,6 +61,7 @@ ament_target_dependencies(rbf_clap_b7_driver_exe
         nav_msgs
         nmea_msgs
         tf2
+        autoware_sensing_msgs
         )
 
 install(TARGETS

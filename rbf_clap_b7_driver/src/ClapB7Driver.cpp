@@ -52,7 +52,6 @@ ClapB7Driver::ClapB7Driver()
       serial_boost(serial_name_, baud_rate_),
 
 
-
       ntrip_server_ip_{this->declare_parameter("ntrip_ip",
                                                      ParameterValue("212.156.70.42"),
                                                      ParameterDescriptor{})
@@ -91,6 +90,9 @@ ClapB7Driver::ClapB7Driver()
 
       pub_nav_sat_fix_{create_publisher<sensor_msgs::msg::NavSatFix>(
           nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_gnss_orientation_{create_publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>(
+          "/gnss/autoware_orientation", rclcpp::QoS{10}, PubAllocT{})},
 
       // Timer
       timer_{this->create_wall_timer(
@@ -184,7 +186,7 @@ void ClapB7Driver::publish_standart_msgs()
 {
   sensor_msgs::msg::Imu msg_imu;
   sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
-
+  autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
   // GNSS NavSatFix Message
   msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("gnss"));
   msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
@@ -245,8 +247,25 @@ void ClapB7Driver::publish_standart_msgs()
   msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
   msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
 
+    quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
+    quart_orient.normalize();
+
+    msg_gnss_orientation.header.set__frame_id(static_cast<std::string>("autoware_orientation"));
+    msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
+    msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+
+    msg_gnss_orientation.orientation.orientation.set__w(quart_orient.getW());
+    msg_gnss_orientation.orientation.orientation.set__x(quart_orient.getX());
+    msg_gnss_orientation.orientation.orientation.set__y(quart_orient.getY());
+    msg_gnss_orientation.orientation.orientation.set__z(quart_orient.getZ());
+
+    msg_gnss_orientation.orientation.rmse_rotation_x = 0;
+    msg_gnss_orientation.orientation.rmse_rotation_y = 0;
+    msg_gnss_orientation.orientation.rmse_rotation_z = 0;
+
   pub_imu_->publish(msg_imu);
   pub_nav_sat_fix_->publish(msg_nav_sat_fix);
+  pub_gnss_orientation_->publish(msg_gnss_orientation);
 }
 
 int ClapB7Driver::NTRIP_client_start()
