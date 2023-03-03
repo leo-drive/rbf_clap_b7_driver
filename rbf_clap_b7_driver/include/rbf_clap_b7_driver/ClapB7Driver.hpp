@@ -37,6 +37,13 @@
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
 #define HZ_TO_SECOND ( 100 )
 
+// ROS Time to GPS time Parameters
+#define k_TO_NANO (1e9)
+#define k_GPS_SEC_IN_WEEK (60 * 60 * 24 * 7)
+#define k_UNIX_OFFSET (315964782000000000)
+#define k_MILI_TO_NANO (1e6)
+
+
 extern int freq_rawimu;
 extern int freq_inspvax;
 
@@ -57,8 +64,7 @@ private:
     void pub_ClapB7Data();
     int NTRIP_client_start();
     void publish_standart_msgs();
-
-
+    int64_t ros_time_to_gps_time_nano();
     std::string clap_data_topic_;
     std::string imu_topic_;
     std::string nav_sat_fix_topic_;

@@ -189,8 +189,8 @@ void ClapB7Driver::publish_standart_msgs()
   autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
   // GNSS NavSatFix Message
   msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("gnss"));
-  msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
-  msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+  msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(pow(10, -9) * ros_time_to_gps_time_nano()));
+  msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(ros_time_to_gps_time_nano()));
 
   msg_nav_sat_fix.status.set__status(0);
 
@@ -285,4 +285,12 @@ int ClapB7Driver::NTRIP_client_start()
 
   ntripClient.set_report_interval(0.001);
   ntrip_status_ = ntripClient.Run();
+}
+int64_t ClapB7Driver::ros_time_to_gps_time_nano() {
+
+    int64_t time_nano = (k_GPS_SEC_IN_WEEK * static_cast<std::int64_t>(clapB7Controller.header.refWeekNumber * k_TO_NANO)
+                 + (k_MILI_TO_NANO * clapB7Controller.header.weekMs)
+                 + k_UNIX_OFFSET);
+
+    return time_nano;
 }
