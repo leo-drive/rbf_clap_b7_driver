@@ -43,9 +43,12 @@
 #define k_UNIX_OFFSET (315964782000000000)
 #define k_MILI_TO_NANO (1e6)
 
+#define INS_INACTIVE    0
+#define INS_ALIGNING    1
 
 extern int freq_rawimu;
 extern int freq_inspvax;
+extern int freq_agric;
 
 class ClapB7Driver : public rclcpp::Node
 {
@@ -65,6 +68,8 @@ private:
     int NTRIP_client_start();
     void publish_standart_msgs();
     int64_t ros_time_to_gps_time_nano();
+    void publish_standart_msgs_agric();
+
     std::string clap_data_topic_;
     std::string imu_topic_;
     std::string nav_sat_fix_topic_;
