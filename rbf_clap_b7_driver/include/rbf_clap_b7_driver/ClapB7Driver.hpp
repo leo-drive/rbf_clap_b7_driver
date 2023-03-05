@@ -70,6 +70,7 @@ private:
     int64_t ros_time_to_gps_time_nano();
     void publish_standart_msgs_agric();
 
+    //Global Parameters
     std::string clap_data_topic_;
     std::string imu_topic_;
     std::string nav_sat_fix_topic_;
@@ -81,7 +82,14 @@ private:
     int ntrip_port_;
     std::string activate_ntrip_;
     long baud_rate_;
+    int time_system_;
+    std::string autoware_orientation_topic_;
+    std::string gnss_frame_;
+    std::string imu_frame_;
+    std::string autoware_orientation_frame_;
 
+    int64_t time_sec;
+    int64_t time_nanosec;
     CallbackAsyncSerial serial_boost;
 
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;

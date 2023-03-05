@@ -9,6 +9,17 @@ rbf_clap_b7_driver:
     ntrip_password: "GR3g4"
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
+    # Topics
     clap_imu_data: "/clap_b7_data"
     imu_topic: "/gnss/imu"
     nav_sat_fix_topic: "/gnss/gps"
+    
+    ### Time System Selection 
+    #   0 --> GPS Global Time 
+    #   1 --> ROS Rclcpp System time     
+    time_system_selection: 0 
+
+    #Frame values
+    gnss_frame: "gnss"
+    imu_frame: "gnss"
+    autoware_orientation_frame: "gnss"

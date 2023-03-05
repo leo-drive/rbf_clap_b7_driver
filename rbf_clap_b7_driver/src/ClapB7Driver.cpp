@@ -82,6 +82,32 @@ ClapB7Driver::ClapB7Driver()
                                               ParameterDescriptor{})
                                .get<std::string>()},
 
+      time_system_{this->declare_parameter(
+                           "time_system_selection",
+                           ParameterValue{0},
+                           ParameterDescriptor{})
+                       .get<int>()},
+
+      autoware_orientation_topic_{this->declare_parameter("autoware_orientation_topic",
+                                                          ParameterValue("/gnss/orientation"),
+                                                          ParameterDescriptor{})
+                                      .get<std::string>()},
+
+      gnss_frame_{this->declare_parameter("gnss_frame",
+                                          ParameterValue("gnss"),
+                                          ParameterDescriptor{})
+                      .get<std::string>()},
+
+      imu_frame_{this->declare_parameter("imu_frame",
+                                         ParameterValue("gnss"),
+                                         ParameterDescriptor{})
+                     .get<std::string>()},
+
+      autoware_orientation_frame_{this->declare_parameter("autoware_orientation_frame",
+                                                          ParameterValue("gnss"),
+                                                          ParameterDescriptor{})
+                                      .get<std::string>()},
+
       // Publisher
       pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
           clap_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -182,29 +208,40 @@ void ClapB7Driver::pub_ClapB7Data()
 
   pub_clap_data_->publish(msg_clap_data);
 
-  if( (clapB7Controller.clapData.ins_status == INS_INACTIVE) || (clapB7Controller.clapData.ins_status == INS_ALIGNING) )
+  if (time_system_ == 0)
   {
-      publish_standart_msgs_agric();
+    time_sec = pow(10, -9) * ros_time_to_gps_time_nano();
+    time_nanosec = ros_time_to_gps_time_nano();
   }
   else
   {
-      publish_standart_msgs();
+    time_sec = this->get_clock()->now().seconds();
+    time_nanosec = this->get_clock()->now().nanoseconds();
   }
 
-
+  if ((clapB7Controller.clapData.ins_status == INS_INACTIVE) || (clapB7Controller.clapData.ins_status == INS_ALIGNING))
+  {
+    publish_standart_msgs_agric();
+  }
+  else
+  {
+    publish_standart_msgs();
+  }
 }
 
 void ClapB7Driver::publish_standart_msgs()
 {
   sensor_msgs::msg::Imu msg_imu;
   sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
-  autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
-  // GNSS NavSatFix Message
-  msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("gnss"));
-  msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(pow(10, -9) * ros_time_to_gps_time_nano()));
-  msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(ros_time_to_gps_time_nano()));
+  // autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
+  //  GNSS NavSatFix Message
+  msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
 
-  msg_nav_sat_fix.status.set__status(0);
+  msg_nav_sat_fix.header.stamp.set__sec(time_sec);
+  msg_nav_sat_fix.header.stamp.set__nanosec(time_nanosec);
+
+  msg_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
+  msg_nav_sat_fix.status.set__service(1); // GPS Connection
 
   msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clapData.latitude));
   msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
@@ -217,9 +254,10 @@ void ClapB7Driver::publish_standart_msgs()
 
   msg_nav_sat_fix.set__position_covariance(pos_cov);
 
-  msg_imu.header.set__frame_id(static_cast<std::string>("gnss"));
-  msg_imu.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
-  msg_imu.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+  msg_imu.header.set__frame_id(static_cast<std::string>(imu_frame_));
+
+  msg_imu.header.stamp.set__sec(time_sec);
+  msg_imu.header.stamp.set__nanosec(time_nanosec);
 
   tf2::Quaternion quart_orient;
 
@@ -231,10 +269,6 @@ void ClapB7Driver::publish_standart_msgs()
 
   t_yaw = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
 
-  std::cout << "Roll: " << clapB7Controller.clapData.roll << std::endl;
-  std::cout << "Pitch: " << clapB7Controller.clapData.pitch << std::endl;
-  std::cout << "Yaw: " << clapB7Controller.clapData.azimuth << std::endl;
-  std::cout << "-------------------" << std::endl;
   quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
   quart_orient.normalize();
 
@@ -282,29 +316,30 @@ void ClapB7Driver::publish_standart_msgs()
 
 void ClapB7Driver::publish_standart_msgs_agric()
 {
-    sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
+  sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
 
-    // GNSS NavSatFix Message
-    msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>("gnss"));
-    msg_nav_sat_fix.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
-    msg_nav_sat_fix.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+  // GNSS NavSatFix Message
+  msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
 
-    msg_nav_sat_fix.status.set__status(0);
+  msg_nav_sat_fix.header.stamp.set__sec(time_sec);
+  msg_nav_sat_fix.header.stamp.set__nanosec(time_nanosec);
 
-    msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
-    msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
-    msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
+  msg_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
+  msg_nav_sat_fix.status.set__service(1); // GPS Connection
 
-    std::array<double, 9> pos_cov{0};
-    pos_cov[0] = clapB7Controller.clap_ArgicData.lat;
-    pos_cov[4] = clapB7Controller.clap_ArgicData.lon;
-    pos_cov[8] = clapB7Controller.clap_ArgicData.Het;
+  msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
+  msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
+  msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
 
-    msg_nav_sat_fix.set__position_covariance(pos_cov);
+  std::array<double, 9> pos_cov{0};
+  pos_cov[0] = clapB7Controller.clap_ArgicData.lat;
+  pos_cov[4] = clapB7Controller.clap_ArgicData.lon;
+  pos_cov[8] = clapB7Controller.clap_ArgicData.Het;
 
-    pub_nav_sat_fix_->publish(msg_nav_sat_fix);
+  msg_nav_sat_fix.set__position_covariance(pos_cov);
+
+  pub_nav_sat_fix_->publish(msg_nav_sat_fix);
 }
-
 
 int ClapB7Driver::NTRIP_client_start()
 {
@@ -324,11 +359,10 @@ int ClapB7Driver::NTRIP_client_start()
   ntripClient.set_report_interval(0.001);
   ntrip_status_ = ntripClient.Run();
 }
-int64_t ClapB7Driver::ros_time_to_gps_time_nano() {
+int64_t ClapB7Driver::ros_time_to_gps_time_nano()
+{
 
-    int64_t time_nano = (k_GPS_SEC_IN_WEEK * static_cast<std::int64_t>(clapB7Controller.header.refWeekNumber * k_TO_NANO)
-                 + (k_MILI_TO_NANO * clapB7Controller.header.weekMs)
-                 + k_UNIX_OFFSET);
+  int64_t time_nano = (k_GPS_SEC_IN_WEEK * static_cast<std::int64_t>(clapB7Controller.header.refWeekNumber * k_TO_NANO) + (k_MILI_TO_NANO * clapB7Controller.header.weekMs) + k_UNIX_OFFSET);
 
-    return time_nano;
+  return time_nano;
 }
