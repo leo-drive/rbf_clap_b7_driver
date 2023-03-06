@@ -119,7 +119,7 @@ ClapB7Driver::ClapB7Driver()
           nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       pub_gnss_orientation_{create_publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>(
-          "/gnss/autoware_orientation", rclcpp::QoS{10}, PubAllocT{})},
+          autoware_orientation_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       // Timer
       timer_{this->create_wall_timer(
@@ -233,7 +233,7 @@ void ClapB7Driver::publish_standart_msgs()
 {
   sensor_msgs::msg::Imu msg_imu;
   sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
-  // autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
+  autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
   //  GNSS NavSatFix Message
   msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
 
@@ -296,7 +296,7 @@ void ClapB7Driver::publish_standart_msgs()
     quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
     quart_orient.normalize();
 
-    msg_gnss_orientation.header.set__frame_id(static_cast<std::string>("autoware_orientation"));
+    msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
     msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
     msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
 
