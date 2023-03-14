@@ -247,7 +247,7 @@ void ClapB7Driver::publish_standart_msgs()
   msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
   msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clapData.height));
 
-  std::array<double, 9> pos_cov{0};
+  std::array<double, 9> pos_cov{0.001};
   pos_cov[0] = clapB7Controller.clapData.std_dev_latitude;
   pos_cov[4] = clapB7Controller.clapData.std_dev_longitude;
   pos_cov[8] = clapB7Controller.clapData.std_dev_height;
@@ -293,7 +293,17 @@ void ClapB7Driver::publish_standart_msgs()
   msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
   msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
 
-    quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
+
+  std::array<double, 9> orient_cov{0.001};
+  pos_cov[0] = clapB7Controller.clapData.std_dev_roll;
+  pos_cov[4] = clapB7Controller.clapData.std_dev_pitch;
+  pos_cov[8] = clapB7Controller.clapData.std_dev_azimuth;
+
+  msg_imu.set__orientation_covariance(orient_cov);
+
+
+
+  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
     quart_orient.normalize();
 
     msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
@@ -305,9 +315,9 @@ void ClapB7Driver::publish_standart_msgs()
     msg_gnss_orientation.orientation.orientation.set__y(quart_orient.getY());
     msg_gnss_orientation.orientation.orientation.set__z(quart_orient.getZ());
 
-    msg_gnss_orientation.orientation.rmse_rotation_x = 0;
-    msg_gnss_orientation.orientation.rmse_rotation_y = 0;
-    msg_gnss_orientation.orientation.rmse_rotation_z = 0;
+    msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_roll;
+    msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_pitch;
+    msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
 
   pub_imu_->publish(msg_imu);
   pub_nav_sat_fix_->publish(msg_nav_sat_fix);
