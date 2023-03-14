@@ -248,9 +248,9 @@ void ClapB7Driver::publish_standart_msgs()
   msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clapData.height));
 
   std::array<double, 9> pos_cov{0.001};
-  pos_cov[0] = clapB7Controller.clapData.std_dev_latitude;
-  pos_cov[4] = clapB7Controller.clapData.std_dev_longitude;
-  pos_cov[8] = clapB7Controller.clapData.std_dev_height;
+  pos_cov[0] = std::pow(clapB7Controller.clapData.std_dev_latitude,2);
+  pos_cov[4] = std::pow(clapB7Controller.clapData.std_dev_longitude,2);
+  pos_cov[8] = std::pow(clapB7Controller.clapData.std_dev_height,2);
 
   msg_nav_sat_fix.set__position_covariance(pos_cov);
 
@@ -295,9 +295,9 @@ void ClapB7Driver::publish_standart_msgs()
 
 
   std::array<double, 9> orient_cov{0.001};
-  pos_cov[0] = clapB7Controller.clapData.std_dev_roll;
-  pos_cov[4] = clapB7Controller.clapData.std_dev_pitch;
-  pos_cov[8] = clapB7Controller.clapData.std_dev_azimuth;
+  orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll,2);
+  orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch,2);
+  orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth,2);
 
   msg_imu.set__orientation_covariance(orient_cov);
 
