@@ -199,8 +199,10 @@ typedef struct
     ClapB7_AgricMsg_    clap_ArgicData;
     ClapB7_InspvaxMsgs_ clapData;
     ClapB7_RawimuMsgs_  clap_RawimuMsgs;
-    std::function<void()> Parser;
+    std::function<void()> ins_parser;
+    std::function<void()> imu_parser;
 } ClapB7Controller;
 
-void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> callBack);
+
+void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback);
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len);

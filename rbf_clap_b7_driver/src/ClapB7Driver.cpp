@@ -20,8 +20,20 @@ ClapB7Driver::ClapB7Driver()
 
       // General Clap Data Topic
       clap_data_topic_{this->declare_parameter(
-                               "clap_imu_data",
+                               "clap_data",
                                ParameterValue{"/clap_b7_data"},
+                               ParameterDescriptor{})
+                           .get<std::string>()},
+      
+      clap_imu_topic_{this->declare_parameter(
+                               "clap_imu_data",
+                               ParameterValue{"/clap_imu"},
+                               ParameterDescriptor{})
+                           .get<std::string>()},
+      
+      clap_ins_topic_{this->declare_parameter(
+                               "clap_ins_data",
+                               ParameterValue{"/clap_ins"},
                                ParameterDescriptor{})
                            .get<std::string>()},
       // Std. imu topic
@@ -111,6 +123,12 @@ ClapB7Driver::ClapB7Driver()
       // Publisher
       pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
           clap_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
+      
+      pub_clap_imu_{create_publisher<rbf_clap_b7_msgs::msg::ImuData>(
+          clap_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
+      
+      pub_clap_ins_{create_publisher<rbf_clap_b7_msgs::msg::InsData>(
+          clap_ins_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       pub_imu_{create_publisher<sensor_msgs::msg::Imu>(
           imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -132,7 +150,7 @@ ClapB7Driver::ClapB7Driver()
   serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
   // Init ClapB7
-  ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_ClapB7Data, this));
+  ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
 
   if (activate_ntrip_ == "true") {
     NTRIP_client_start();
@@ -148,66 +166,72 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 void ClapB7Driver::timer_callback()
 {
 
-  printf("freq_rawimu_hz = %d\n", freq_rawimu);
-  printf("freq_inspvax_hz = %d\n", freq_inspvax);
-  printf("freq_agric_hz = %d\n", freq_agric);
+  RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
+  RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
+  RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
 
   freq_rawimu = 0;
   freq_inspvax = 0;
   freq_agric = 0;
 }
 
-void ClapB7Driver::pub_ClapB7Data()
+void ClapB7Driver::pub_imu_data()
 {
 
-  rbf_clap_b7_msgs::msg::ClapData msg_clap_data;
+  rbf_clap_b7_msgs::msg::ImuData msg_imu_data;
 
-  msg_clap_data.set__ins_status(static_cast<uint32_t>(clapB7Controller.clapData.ins_status));
-  msg_clap_data.set__pos_type(static_cast<uint32_t>(clapB7Controller.clapData.pos_type));
+  msg_imu_data.set__imu_status(static_cast<uint8_t>(clapB7Controller.clap_RawimuMsgs.imu_status));
 
-  msg_clap_data.set__latitude(static_cast<double>(clapB7Controller.clapData.latitude));
-  msg_clap_data.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
+  msg_imu_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR));
+  msg_imu_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_accel_output * (-ACCEL_SCALE_FACTOR)));
+  msg_imu_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_accel_output * ACCEL_SCALE_FACTOR));
 
-  msg_clap_data.set__height(static_cast<double>(clapB7Controller.clapData.height));
+  msg_imu_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * GYRO_SCALE_FACTOR));
+  msg_imu_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (-GYRO_SCALE_FACTOR)));
+  msg_imu_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR));
 
-  msg_clap_data.set__undulation(static_cast<float>(clapB7Controller.clapData.undulation));
+  pub_clap_imu_->publish(msg_imu_data);
+ 
+}
 
-  msg_clap_data.set__north_velocity(static_cast<double>(clapB7Controller.clapData.north_velocity));
-  msg_clap_data.set__east_velocity(static_cast<double>(clapB7Controller.clapData.east_velocity));
-  msg_clap_data.set__up_velocity(static_cast<double>(clapB7Controller.clapData.up_velocity));
+void ClapB7Driver::pub_ins_data() {
 
-  msg_clap_data.set__roll(static_cast<double>(clapB7Controller.clapData.roll));
-  msg_clap_data.set__pitch(static_cast<double>(clapB7Controller.clapData.pitch));
-  msg_clap_data.set__azimuth(static_cast<double>(clapB7Controller.clapData.azimuth));
+  rbf_clap_b7_msgs::msg::InsData msg_ins_data;
 
-  msg_clap_data.set__std_dev_latitude(static_cast<float>(clapB7Controller.clapData.std_dev_latitude));
-  msg_clap_data.set__std_dev_longitude(static_cast<float>(clapB7Controller.clapData.std_dev_longitude));
+  msg_ins_data.set__ins_status(static_cast<uint32_t>(clapB7Controller.clapData.ins_status));
+  msg_ins_data.set__pos_type(static_cast<uint32_t>(clapB7Controller.clapData.pos_type));
 
-  msg_clap_data.set__std_dev_height(static_cast<float>(clapB7Controller.clapData.std_dev_height));
+  msg_ins_data.set__latitude(static_cast<double>(clapB7Controller.clapData.latitude));
+  msg_ins_data.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
 
-  msg_clap_data.set__std_dev_north_velocity(static_cast<float>(clapB7Controller.clapData.std_dev_north_velocity));
-  msg_clap_data.set__std_dev_east_velocity(static_cast<float>(clapB7Controller.clapData.std_dev_east_velocity));
-  msg_clap_data.set__std_dev_up_velocity(static_cast<float>(clapB7Controller.clapData.std_dev_up_velocity));
+  msg_ins_data.set__height(static_cast<double>(clapB7Controller.clapData.height));
 
-  msg_clap_data.set__std_dev_roll(static_cast<float>(clapB7Controller.clapData.std_dev_roll));
-  msg_clap_data.set__std_dev_pitch(static_cast<float>(clapB7Controller.clapData.std_dev_pitch));
-  msg_clap_data.set__std_dev_azimuth(static_cast<float>(clapB7Controller.clapData.std_dev_azimuth));
+  msg_ins_data.set__undulation(static_cast<float>(clapB7Controller.clapData.undulation));
 
-  msg_clap_data.set__extended_solution_stat(static_cast<uint32_t>(clapB7Controller.clapData.extended_solution_stat));
-  msg_clap_data.set__time_since_update(static_cast<uint16_t>(clapB7Controller.clapData.time_since_update));
+  msg_ins_data.set__north_velocity(static_cast<double>(clapB7Controller.clapData.north_velocity));
+  msg_ins_data.set__east_velocity(static_cast<double>(clapB7Controller.clapData.east_velocity));
+  msg_ins_data.set__up_velocity(static_cast<double>(clapB7Controller.clapData.up_velocity));
 
-  msg_clap_data.set__imu_status(static_cast<uint8_t>(clapB7Controller.clap_RawimuMsgs.imu_status));
+  msg_ins_data.set__roll(static_cast<double>(clapB7Controller.clapData.roll));
+  msg_ins_data.set__pitch(static_cast<double>(clapB7Controller.clapData.pitch));
+  msg_ins_data.set__azimuth(static_cast<double>(clapB7Controller.clapData.azimuth));
 
-  msg_clap_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR));
-  msg_clap_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_accel_output * (-ACCEL_SCALE_FACTOR)));
-  msg_clap_data.set__x_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_accel_output * ACCEL_SCALE_FACTOR));
+  msg_ins_data.set__std_dev_latitude(static_cast<float>(clapB7Controller.clapData.std_dev_latitude));
+  msg_ins_data.set__std_dev_longitude(static_cast<float>(clapB7Controller.clapData.std_dev_longitude));
 
-  msg_clap_data.set__z_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * GYRO_SCALE_FACTOR));
-  msg_clap_data.set__y_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (-GYRO_SCALE_FACTOR)));
-  msg_clap_data.set__x_gyro_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR));
+  msg_ins_data.set__std_dev_height(static_cast<float>(clapB7Controller.clapData.std_dev_height));
 
-  pub_clap_data_->publish(msg_clap_data);
+  msg_ins_data.set__std_dev_north_velocity(static_cast<float>(clapB7Controller.clapData.std_dev_north_velocity));
+  msg_ins_data.set__std_dev_east_velocity(static_cast<float>(clapB7Controller.clapData.std_dev_east_velocity));
+  msg_ins_data.set__std_dev_up_velocity(static_cast<float>(clapB7Controller.clapData.std_dev_up_velocity));
 
+  msg_ins_data.set__std_dev_roll(static_cast<float>(clapB7Controller.clapData.std_dev_roll));
+  msg_ins_data.set__std_dev_pitch(static_cast<float>(clapB7Controller.clapData.std_dev_pitch));
+  msg_ins_data.set__std_dev_azimuth(static_cast<float>(clapB7Controller.clapData.std_dev_azimuth));
+
+  msg_ins_data.set__extended_solution_stat(static_cast<uint32_t>(clapB7Controller.clapData.extended_solution_stat));
+  msg_ins_data.set__time_since_update(static_cast<uint16_t>(clapB7Controller.clapData.time_since_update));
+  
   if (time_system_ == 0)
   {
     time_sec = pow(10, -9) * ros_time_to_gps_time_nano();
@@ -225,13 +249,16 @@ void ClapB7Driver::pub_ClapB7Data()
   }
   else
   {
-    publish_standart_msgs();
+    publish_nav_sat_fix();
   }
+
+  pub_clap_ins_->publish(msg_ins_data);
+
 }
 
-void ClapB7Driver::publish_standart_msgs()
+void ClapB7Driver::publish_nav_sat_fix()
 {
-  sensor_msgs::msg::Imu msg_imu;
+  
   sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
   autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
   //  GNSS NavSatFix Message
@@ -247,12 +274,91 @@ void ClapB7Driver::publish_standart_msgs()
   msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clapData.longitude));
   msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clapData.height));
 
+
+
   std::array<double, 9> pos_cov{0.001};
   pos_cov[0] = std::pow(clapB7Controller.clapData.std_dev_latitude,2);
   pos_cov[4] = std::pow(clapB7Controller.clapData.std_dev_longitude,2);
   pos_cov[8] = std::pow(clapB7Controller.clapData.std_dev_height,2);
 
+
   msg_nav_sat_fix.set__position_covariance(pos_cov);
+  tf2::Quaternion quart_orient;
+
+  double t_roll, t_pitch, t_yaw;
+
+  t_pitch = 180 * atan(clapB7Controller.clap_RawimuMsgs.x_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.y_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+
+  t_roll = 180 * atan(clapB7Controller.clap_RawimuMsgs.y_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+
+  t_yaw = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+
+  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
+  quart_orient.normalize();
+
+  float old = 0;
+
+  float delta_theta_z = (clapB7Controller.clap_RawimuMsgs.z_accel_output - old) * 0.01;
+
+  old = clapB7Controller.clap_RawimuMsgs.z_accel_output;
+
+  t_yaw += delta_theta_z * 180 / M_PI;
+  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
+  quart_orient.normalize();
+
+  msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
+  msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
+  msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
+
+  msg_gnss_orientation.orientation.orientation.set__w(quart_orient.getW());
+  msg_gnss_orientation.orientation.orientation.set__x(quart_orient.getX());
+  msg_gnss_orientation.orientation.orientation.set__y(quart_orient.getY());
+  msg_gnss_orientation.orientation.orientation.set__z(quart_orient.getZ());
+
+  msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_roll;
+  msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_pitch;
+  msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
+
+  
+  pub_nav_sat_fix_->publish(msg_nav_sat_fix);
+  pub_gnss_orientation_->publish(msg_gnss_orientation);
+}
+
+void ClapB7Driver::publish_standart_msgs_agric()
+{
+  sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
+
+  // GNSS NavSatFix Message
+  msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
+
+  msg_nav_sat_fix.header.stamp.set__sec(time_sec);
+  msg_nav_sat_fix.header.stamp.set__nanosec(time_nanosec);
+
+  msg_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
+  msg_nav_sat_fix.status.set__service(1); // GPS Connection
+
+  msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
+  msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
+  msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
+
+  std::array<double, 9> pos_cov{0};
+  pos_cov[0] = clapB7Controller.clap_ArgicData.lat;
+  pos_cov[4] = clapB7Controller.clap_ArgicData.lon;
+  pos_cov[8] = clapB7Controller.clap_ArgicData.Het;
+
+  msg_nav_sat_fix.set__position_covariance(pos_cov);
+
+  pub_nav_sat_fix_->publish(msg_nav_sat_fix);
+}
+
+void ClapB7Driver::publish_std_imu(){
+  sensor_msgs::msg::Imu msg_imu;
+
+  std::array<double, 9> orient_cov{0.001};
+  orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll,2);
+  orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch,2);
+  orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth,2);
+  msg_imu.set__orientation_covariance(orient_cov);
 
   msg_imu.header.set__frame_id(static_cast<std::string>(imu_frame_));
 
@@ -293,62 +399,8 @@ void ClapB7Driver::publish_standart_msgs()
   msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
   msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
 
-
-  std::array<double, 9> orient_cov{0.001};
-  orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll,2);
-  orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch,2);
-  orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth,2);
-
-  msg_imu.set__orientation_covariance(orient_cov);
-
-
-
-  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
-    quart_orient.normalize();
-
-    msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
-    msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
-    msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
-
-    msg_gnss_orientation.orientation.orientation.set__w(quart_orient.getW());
-    msg_gnss_orientation.orientation.orientation.set__x(quart_orient.getX());
-    msg_gnss_orientation.orientation.orientation.set__y(quart_orient.getY());
-    msg_gnss_orientation.orientation.orientation.set__z(quart_orient.getZ());
-
-    msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_roll;
-    msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_pitch;
-    msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
-
   pub_imu_->publish(msg_imu);
-  pub_nav_sat_fix_->publish(msg_nav_sat_fix);
-  pub_gnss_orientation_->publish(msg_gnss_orientation);
-}
 
-void ClapB7Driver::publish_standart_msgs_agric()
-{
-  sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
-
-  // GNSS NavSatFix Message
-  msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
-
-  msg_nav_sat_fix.header.stamp.set__sec(time_sec);
-  msg_nav_sat_fix.header.stamp.set__nanosec(time_nanosec);
-
-  msg_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
-  msg_nav_sat_fix.status.set__service(1); // GPS Connection
-
-  msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
-  msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
-  msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
-
-  std::array<double, 9> pos_cov{0};
-  pos_cov[0] = clapB7Controller.clap_ArgicData.lat;
-  pos_cov[4] = clapB7Controller.clap_ArgicData.lon;
-  pos_cov[8] = clapB7Controller.clap_ArgicData.Het;
-
-  msg_nav_sat_fix.set__position_covariance(pos_cov);
-
-  pub_nav_sat_fix_->publish(msg_nav_sat_fix);
 }
 
 int ClapB7Driver::NTRIP_client_start()
@@ -369,6 +421,7 @@ int ClapB7Driver::NTRIP_client_start()
   ntripClient.set_report_interval(0.001);
   ntrip_status_ = ntripClient.Run();
 }
+
 int64_t ClapB7Driver::ros_time_to_gps_time_nano()
 {
 

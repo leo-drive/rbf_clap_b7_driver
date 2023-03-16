@@ -69,14 +69,15 @@ static uint32_t CalculateCRC32(uint8_t *szBuf, int iSize)
     return ulCRC;
 }
 
-void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> callBack)
+void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback)
 {
     uint16_t i;
     for ( i = 0; i < sizeof(ClapB7Controller); i++)
     {
         ((uint8_t*)p_Controller)[i] = 0;
     }
-    p_Controller->Parser = callBack;
+    p_Controller->ins_parser = ins_callback;
+    p_Controller->imu_parser = imu_callback;
 }
 
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len)
@@ -185,7 +186,7 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                     {
                         freq_agric++;
                         memcpy(&p_Controller->clap_ArgicData, (p_Controller->rawData + HEADER_LEN_AGRIC), sizeof(ClapB7_AgricMsg_));
-                        p_Controller->Parser();
+                        p_Controller->ins_parser();
                     }
                     else{
                         //scanned bytes don't contain meaningful data
@@ -210,13 +211,15 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                         {
                             freq_rawimu++;
                             memcpy(&p_Controller->clap_RawimuMsgs, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_RawimuMsgs_));
+                            p_Controller->imu_parser();
                         }
                         else if(p_Controller->header.messageID == INSPVAX_MSG_ID)
                         {
                             freq_inspvax++;
                             memcpy(&p_Controller->clapData, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_InspvaxMsgs_));
+                            p_Controller->ins_parser();
                         }
-                        p_Controller->Parser();
+                        
                     }
                     else{
                         //scanned bytes don't contain meaningful data

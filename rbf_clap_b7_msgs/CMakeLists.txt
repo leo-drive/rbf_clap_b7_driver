@@ -12,6 +12,8 @@ find_package(std_msgs REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
         "msg/ClapData.msg"
+        "msg/ImuData.msg"
+        "msg/InsData.msg"
         )
 
 if(BUILD_TESTING)

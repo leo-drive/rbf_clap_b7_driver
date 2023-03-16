@@ -30,6 +30,9 @@
 #include "std_msgs/msg/u_int8.hpp"
 
 #include <rbf_clap_b7_msgs/msg/clap_data.hpp>
+#include <rbf_clap_b7_msgs/msg/imu_data.hpp>
+#include <rbf_clap_b7_msgs/msg/ins_data.hpp>
+
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
 
@@ -50,6 +53,7 @@ extern int freq_rawimu;
 extern int freq_inspvax;
 extern int freq_agric;
 
+
 class ClapB7Driver : public rclcpp::Node
 {
 public:
@@ -64,14 +68,18 @@ public:
 private:
     
     void timer_callback();
-    void pub_ClapB7Data();
+    void pub_imu_data();
+    void pub_ins_data();
     int NTRIP_client_start();
-    void publish_standart_msgs();
+    void publish_nav_sat_fix();
+    void publish_std_imu();
     int64_t ros_time_to_gps_time_nano();
     void publish_standart_msgs_agric();
 
     //Global Parameters
     std::string clap_data_topic_;
+    std::string clap_imu_topic_;
+    std::string clap_ins_topic_;
     std::string imu_topic_;
     std::string nav_sat_fix_topic_;
     std::string serial_name_;
@@ -93,6 +101,9 @@ private:
     CallbackAsyncSerial serial_boost;
 
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
+    rclcpp::Publisher<rbf_clap_b7_msgs::msg::ImuData>::SharedPtr pub_clap_imu_;
+    rclcpp::Publisher<rbf_clap_b7_msgs::msg::InsData>::SharedPtr pub_clap_ins_;
+
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_imu_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;

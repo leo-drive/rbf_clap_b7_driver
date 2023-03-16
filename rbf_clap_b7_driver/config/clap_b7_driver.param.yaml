@@ -10,7 +10,9 @@ rbf_clap_b7_driver:
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
     # Topics
-    clap_imu_data: "/clap_b7_data"
+    clap_data: "/clap_b7_data"
+    clap_imu_data: "/clap_imu"
+    clap_ins_data: "/clap_ins"
     imu_topic: "/gnss/imu"
     nav_sat_fix_topic: "/gnss/gps"
     autoware_orientation_topic: "/gnss/orientation"
