@@ -48,6 +48,18 @@ ClapB7Driver::ClapB7Driver()
                                  ParameterValue{"/gnss/gps"},
                                  ParameterDescriptor{})
                              .get<std::string>()},
+      
+      twist_topic_{this->declare_parameter(
+                                 "twist_topic",
+                                 ParameterValue{"/gnss/twist"},
+                                 ParameterDescriptor{})
+                             .get<std::string>()},
+
+
+      autoware_orientation_topic_{this->declare_parameter("autoware_orientation_topic",
+                            ParameterValue("/gnss/orientation"),
+                            ParameterDescriptor{})
+        .get<std::string>()},
 
       // Serial port config
       serial_name_{this->declare_parameter(
@@ -94,16 +106,16 @@ ClapB7Driver::ClapB7Driver()
                                               ParameterDescriptor{})
                                .get<std::string>()},
 
+      enu_ned_transform_{this->declare_parameter("enu_ned_transform",
+                                              ParameterValue("true"),
+                                              ParameterDescriptor{})
+                                .get<std::string>()},
+
       time_system_{this->declare_parameter(
                            "time_system_selection",
                            ParameterValue{0},
                            ParameterDescriptor{})
                        .get<int>()},
-
-      autoware_orientation_topic_{this->declare_parameter("autoware_orientation_topic",
-                                                          ParameterValue("/gnss/orientation"),
-                                                          ParameterDescriptor{})
-                                      .get<std::string>()},
 
       gnss_frame_{this->declare_parameter("gnss_frame",
                                           ParameterValue("gnss"),
@@ -111,6 +123,11 @@ ClapB7Driver::ClapB7Driver()
                       .get<std::string>()},
 
       imu_frame_{this->declare_parameter("imu_frame",
+                                         ParameterValue("gnss"),
+                                         ParameterDescriptor{})
+                     .get<std::string>()},
+
+      twist_frame_{this->declare_parameter("twist_frame",
                                          ParameterValue("gnss"),
                                          ParameterDescriptor{})
                      .get<std::string>()},
@@ -135,6 +152,9 @@ ClapB7Driver::ClapB7Driver()
 
       pub_nav_sat_fix_{create_publisher<sensor_msgs::msg::NavSatFix>(
           nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_twist_{create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
+          twist_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       pub_gnss_orientation_{create_publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>(
           autoware_orientation_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -174,13 +194,17 @@ void ClapB7Driver::timer_callback()
   freq_inspvax = 0;
   freq_agric = 0;
 }
+double ClapB7Driver::deg2rad(double degree){
+  return (degree * (M_PI / 180));
 
+}
 void ClapB7Driver::pub_imu_data()
 {
 
   rbf_clap_b7_msgs::msg::ImuData msg_imu_data;
 
   msg_imu_data.set__imu_status(static_cast<uint8_t>(clapB7Controller.clap_RawimuMsgs.imu_status));
+
 
   msg_imu_data.set__z_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR));
   msg_imu_data.set__y_accel_output(static_cast<int32_t>(clapB7Controller.clap_RawimuMsgs.y_accel_output * (-ACCEL_SCALE_FACTOR)));
@@ -232,6 +256,8 @@ void ClapB7Driver::pub_ins_data() {
   msg_ins_data.set__extended_solution_stat(static_cast<uint32_t>(clapB7Controller.clapData.extended_solution_stat));
   msg_ins_data.set__time_since_update(static_cast<uint16_t>(clapB7Controller.clapData.time_since_update));
   
+
+  
   if (time_system_ == 0)
   {
     time_sec = pow(10, -9) * ros_time_to_gps_time_nano();
@@ -245,12 +271,19 @@ void ClapB7Driver::pub_ins_data() {
 
   if ((clapB7Controller.clapData.ins_status == INS_INACTIVE) || (clapB7Controller.clapData.ins_status == INS_ALIGNING))
   {
+    ins_active_ = 0;
     publish_standart_msgs_agric();
+
   }
   else
   {
+    ins_active_ = 1;
     publish_nav_sat_fix();
   }
+    
+  publish_std_imu();
+  publish_twist();
+  publish_orientation();
 
   pub_clap_ins_->publish(msg_ins_data);
 
@@ -260,7 +293,7 @@ void ClapB7Driver::publish_nav_sat_fix()
 {
   
   sensor_msgs::msg::NavSatFix msg_nav_sat_fix;
-  autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
+
   //  GNSS NavSatFix Message
   msg_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
 
@@ -283,45 +316,8 @@ void ClapB7Driver::publish_nav_sat_fix()
 
 
   msg_nav_sat_fix.set__position_covariance(pos_cov);
-  tf2::Quaternion quart_orient;
 
-  double t_roll, t_pitch, t_yaw;
-
-  t_pitch = 180 * atan(clapB7Controller.clap_RawimuMsgs.x_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.y_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
-
-  t_roll = 180 * atan(clapB7Controller.clap_RawimuMsgs.y_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
-
-  t_yaw = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
-
-  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
-  quart_orient.normalize();
-
-  float old = 0;
-
-  float delta_theta_z = (clapB7Controller.clap_RawimuMsgs.z_accel_output - old) * 0.01;
-
-  old = clapB7Controller.clap_RawimuMsgs.z_accel_output;
-
-  t_yaw += delta_theta_z * 180 / M_PI;
-  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
-  quart_orient.normalize();
-
-  msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
-  msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(this->get_clock()->now().seconds()));
-  msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(this->get_clock()->now().nanoseconds()));
-
-  msg_gnss_orientation.orientation.orientation.set__w(quart_orient.getW());
-  msg_gnss_orientation.orientation.orientation.set__x(quart_orient.getX());
-  msg_gnss_orientation.orientation.orientation.set__y(quart_orient.getY());
-  msg_gnss_orientation.orientation.orientation.set__z(quart_orient.getZ());
-
-  msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_roll;
-  msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_pitch;
-  msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
-
-  
   pub_nav_sat_fix_->publish(msg_nav_sat_fix);
-  pub_gnss_orientation_->publish(msg_gnss_orientation);
 }
 
 void ClapB7Driver::publish_standart_msgs_agric()
@@ -342,9 +338,9 @@ void ClapB7Driver::publish_standart_msgs_agric()
   msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
 
   std::array<double, 9> pos_cov{0};
-  pos_cov[0] = clapB7Controller.clap_ArgicData.lat;
-  pos_cov[4] = clapB7Controller.clap_ArgicData.lon;
-  pos_cov[8] = clapB7Controller.clap_ArgicData.Het;
+  pos_cov[0] = std::pow(clapB7Controller.clap_ArgicData.Xigema_lat,2);
+  pos_cov[4] = std::pow(clapB7Controller.clap_ArgicData.Xigema_lon,2);
+  pos_cov[8] = std::pow(clapB7Controller.clap_ArgicData.Xigema_alt,2);
 
   msg_nav_sat_fix.set__position_covariance(pos_cov);
 
@@ -352,44 +348,45 @@ void ClapB7Driver::publish_standart_msgs_agric()
 }
 
 void ClapB7Driver::publish_std_imu(){
+
   sensor_msgs::msg::Imu msg_imu;
-
-  std::array<double, 9> orient_cov{0.001};
-  orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll,2);
-  orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch,2);
-  orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth,2);
-  msg_imu.set__orientation_covariance(orient_cov);
-
   msg_imu.header.set__frame_id(static_cast<std::string>(imu_frame_));
 
   msg_imu.header.stamp.set__sec(time_sec);
   msg_imu.header.stamp.set__nanosec(time_nanosec);
 
-  tf2::Quaternion quart_orient;
+  tf2::Quaternion quart_orient, quart_orient_corrected;
+  tf2::Matrix3x3 ENU2NED, ins_rot_matrix, ins_rot_;
 
-  double t_roll, t_pitch, t_yaw;
+  if(ins_active_ == 0){
+    quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Heading));
+  }
+  else if(ins_active_ == 1){
+    quart_orient.setRPY(deg2rad(clapB7Controller.clapData.roll), deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.azimuth));
+  }
+  if(enu_ned_transform_=="true"){
+    //ENU -> NED Transformation
+    ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
+    ins_rot_matrix.setRotation(quart_orient);
+    ins_rot_ = ENU2NED * ins_rot_matrix;
+    ins_rot_.getRotation(quart_orient_corrected);
 
-  t_pitch = 180 * atan(clapB7Controller.clap_RawimuMsgs.x_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.y_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
 
-  t_roll = 180 * atan(clapB7Controller.clap_RawimuMsgs.y_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
 
-  t_yaw = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+    msg_imu.orientation.set__w(quart_orient_corrected.getW());
+    msg_imu.orientation.set__x(quart_orient_corrected.getX());
+    msg_imu.orientation.set__y(quart_orient_corrected.getY());
+    msg_imu.orientation.set__z(quart_orient_corrected.getZ());
 
-  quart_orient.setRPY(clapB7Controller.clapData.roll, clapB7Controller.clapData.pitch, clapB7Controller.clapData.azimuth);
-  quart_orient.normalize();
+  }
+  else{
+    msg_imu.orientation.set__w(quart_orient.getW());
+    msg_imu.orientation.set__x(quart_orient.getX());
+    msg_imu.orientation.set__y(quart_orient.getY());
+    msg_imu.orientation.set__z(quart_orient.getZ());
 
-  float old = 0;
+  }
 
-  float delta_theta_z = (clapB7Controller.clap_RawimuMsgs.z_accel_output - old) * 0.01;
-
-  old = clapB7Controller.clap_RawimuMsgs.z_accel_output;
-
-  t_yaw += delta_theta_z * 180 / M_PI;
-
-  msg_imu.orientation.set__w(static_cast<double>(quart_orient.getW()));
-  msg_imu.orientation.set__x(static_cast<double>(quart_orient.getX()));
-  msg_imu.orientation.set__y(static_cast<double>(quart_orient.getY()));
-  msg_imu.orientation.set__z(static_cast<double>(quart_orient.getZ()));
 
   msg_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR * HZ_TO_SECOND));
   msg_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR * HZ_TO_SECOND));
@@ -399,8 +396,31 @@ void ClapB7Driver::publish_std_imu(){
   msg_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
   msg_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
 
+  std::array<double, 9> orient_cov{0.001};
+  orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll,2);
+  orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch,2);
+  orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth,2);
+
+  msg_imu.set__orientation_covariance(orient_cov);
+
   pub_imu_->publish(msg_imu);
 
+  /*
+double t_roll, t_pitch, t_yaw;
+
+  t_pitch = 180 * atan(clapB7Controller.clap_RawimuMsgs.x_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.y_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+
+  t_roll = 180 * atan(clapB7Controller.clap_RawimuMsgs.y_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+
+  t_yaw = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+  float old = 0;
+
+  float delta_theta_z = (clapB7Controller.clap_RawimuMsgs.z_accel_output - old) * 0.01;
+
+  old = clapB7Controller.clap_RawimuMsgs.z_accel_output;
+
+  t_yaw += delta_theta_z * 180 / M_PI;
+  */
 }
 
 int ClapB7Driver::NTRIP_client_start()
@@ -428,4 +448,90 @@ int64_t ClapB7Driver::ros_time_to_gps_time_nano()
   int64_t time_nano = (k_GPS_SEC_IN_WEEK * static_cast<std::int64_t>(clapB7Controller.header.refWeekNumber * k_TO_NANO) + (k_MILI_TO_NANO * clapB7Controller.header.weekMs) + k_UNIX_OFFSET);
 
   return time_nano;
+}
+
+void ClapB7Driver::publish_twist(){
+
+  geometry_msgs::msg::TwistWithCovarianceStamped msg_twist;
+
+  msg_twist.header.set__frame_id(static_cast<std::string>(twist_frame_));
+  msg_twist.header.stamp.set__sec(time_sec);
+  msg_twist.header.stamp.set__nanosec(time_nanosec);
+
+  double total_speed_linear= 0;
+  double t_angular_speed_z= 0;
+
+  if(ins_active_ == 0){
+    total_speed_linear = std::sqrt(std::pow(clapB7Controller.clap_ArgicData.Velocity_E,2)+std::pow(clapB7Controller.clap_ArgicData.Velocity_N,2));
+  }
+  else if(ins_active_ == 1){
+    total_speed_linear = std::sqrt(std::pow(clapB7Controller.clapData.east_velocity,2)+std::pow(clapB7Controller.clapData.north_velocity,2));
+  }
+  msg_twist.twist.twist.linear.x = total_speed_linear;
+
+  t_angular_speed_z = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+
+  msg_twist.twist.twist.angular.z = deg2rad(t_angular_speed_z);
+
+  msg_twist.twist.covariance[0]  = 0.04;
+  msg_twist.twist.covariance[7]  = 10000.0;
+  msg_twist.twist.covariance[14] = 10000.0;
+  msg_twist.twist.covariance[21] = 10000.0;
+  msg_twist.twist.covariance[28] = 10000.0;
+  msg_twist.twist.covariance[35] = 0.02;
+
+  pub_twist_->publish(msg_twist);
+}
+
+void ClapB7Driver::publish_orientation()
+{
+
+  autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
+  tf2::Quaternion quart_orient, quart_orient_corrected;
+  tf2::Matrix3x3 ENU2NED, ins_rot_matrix, ins_rot_;
+
+  msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
+  msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(time_sec));
+  msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(time_nanosec));
+
+
+
+  if(ins_active_ == 0){
+    quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Heading));
+  }
+  else if(ins_active_ == 1){
+    quart_orient.setRPY(deg2rad(clapB7Controller.clapData.roll), deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.azimuth));
+  }
+
+  if(enu_ned_transform_=="true"){
+    //ENU -> NED Transformation
+    ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
+    ins_rot_matrix.setRotation(quart_orient);
+    ins_rot_ = ENU2NED * ins_rot_matrix;
+    ins_rot_.getRotation(quart_orient_corrected);
+
+
+    msg_gnss_orientation.orientation.orientation.set__w(quart_orient_corrected.getW());
+    msg_gnss_orientation.orientation.orientation.set__x(quart_orient_corrected.getX());
+    msg_gnss_orientation.orientation.orientation.set__y(quart_orient_corrected.getY());
+    msg_gnss_orientation.orientation.orientation.set__z(quart_orient_corrected.getZ());
+
+  }
+  else{
+    msg_gnss_orientation.orientation.orientation.set__w(quart_orient.getW());
+    msg_gnss_orientation.orientation.orientation.set__x(quart_orient.getX());
+    msg_gnss_orientation.orientation.orientation.set__y(quart_orient.getY());
+    msg_gnss_orientation.orientation.orientation.set__z(quart_orient.getZ());
+
+  }
+
+
+
+  msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_roll;
+  msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_pitch;
+  msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
+
+
+  pub_gnss_orientation_->publish(msg_gnss_orientation);
+
 }

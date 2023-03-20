@@ -16,12 +16,17 @@ rbf_clap_b7_driver:
     imu_topic: "/gnss/imu"
     nav_sat_fix_topic: "/gnss/gps"
     autoware_orientation_topic: "/gnss/orientation"
+    twist_topic: "/gnss/twist"
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     
-    time_system_selection: 0 
+    time_system_selection: 0
+
+    ### ENU -> NED Transform Selection
+    enu_ned_transform: "true"
 
     #Frame values
     gnss_frame: "gnss"
     imu_frame: "gnss"
     autoware_orientation_frame: "gnss"
+    twist_frame: "gnss"

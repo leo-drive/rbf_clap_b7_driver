@@ -12,6 +12,7 @@
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
+#include <tf2/LinearMath/Matrix3x3.h>
 
 #include "TermiosSerial.h"
 #include "AsyncSerial.h"
@@ -25,6 +26,8 @@
 #include "geometry_msgs/msg/quaternion.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <autoware_sensing_msgs/msg/gnss_ins_orientation_stamped.hpp>
+#include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
+
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -75,13 +78,22 @@ private:
     void publish_std_imu();
     int64_t ros_time_to_gps_time_nano();
     void publish_standart_msgs_agric();
+    void publish_twist();
+    void publish_orientation();
+    double deg2rad(double degree);
+    //Global Parameters//
 
-    //Global Parameters
+
+    //Topics
     std::string clap_data_topic_;
     std::string clap_imu_topic_;
     std::string clap_ins_topic_;
     std::string imu_topic_;
     std::string nav_sat_fix_topic_;
+    std::string autoware_orientation_topic_;
+    std::string twist_topic_;
+
+    //NTRIP Parameters
     std::string serial_name_;
     std::string ntrip_server_ip_;
     std::string username_;
@@ -90,23 +102,32 @@ private:
     int ntrip_port_;
     std::string activate_ntrip_;
     long baud_rate_;
+    std::string enu_ned_transform_;
+
+
     int time_system_;
-    std::string autoware_orientation_topic_;
+    int64_t time_sec;
+    int64_t time_nanosec;
+
+    bool ins_active_;
+    
+    //Frame Names
     std::string gnss_frame_;
     std::string imu_frame_;
     std::string autoware_orientation_frame_;
+    std::string twist_frame_;
 
-    int64_t time_sec;
-    int64_t time_nanosec;
+
     CallbackAsyncSerial serial_boost;
 
+    //Publishers
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ImuData>::SharedPtr pub_clap_imu_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::InsData>::SharedPtr pub_clap_ins_;
-
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_imu_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
+    rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr pub_twist_;
 
     ClapB7Controller clapB7Controller;
     uint8_t ntrip_status_ = 0;
