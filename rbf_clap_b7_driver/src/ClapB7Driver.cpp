@@ -403,6 +403,12 @@ void ClapB7Driver::publish_std_imu(){
 
   msg_imu.set__orientation_covariance(orient_cov);
 
+  std::array<double, 9> angular_vel_cov{0.001};
+  msg_imu.set__angular_velocity_covariance(angular_vel_cov);
+
+  std::array<double, 9> linear_acc_cov{0.001};
+  msg_imu.set__linear_acceleration_covariance(linear_acc_cov);
+
   pub_imu_->publish(msg_imu);
 
   /*

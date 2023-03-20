@@ -23,7 +23,7 @@ rbf_clap_b7_driver:
     time_system_selection: 0
 
     ### ENU -> NED Transform Selection
-    enu_ned_transform: "true"
+    enu_ned_transform: "false"
 
     #Frame values
     gnss_frame: "gnss"
