@@ -30,3 +30,5 @@ rbf_clap_b7_driver:
     imu_frame: "gnss"
     autoware_orientation_frame: "gnss"
     twist_frame: "gnss"
+
+    debug: "true"

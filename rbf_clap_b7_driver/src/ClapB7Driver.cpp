@@ -92,6 +92,11 @@ ClapB7Driver::ClapB7Driver()
                                               ParameterDescriptor{})
                               .get<std::string>()},
 
+      debug_{this->declare_parameter("debug",
+                                        ParameterValue("true"),
+                                        ParameterDescriptor{})
+                  .get<std::string>()},
+
       mount_point_{this->declare_parameter("ntrip_mount_point",
                                                  ParameterValue("VRSRTCM31"),
                                                  ParameterDescriptor{})
@@ -385,6 +390,14 @@ void ClapB7Driver::publish_std_imu(){
     msg_imu.orientation.set__y(quart_orient.getY());
     msg_imu.orientation.set__z(quart_orient.getZ());
 
+  }
+
+  if(debug_=="true"){
+    tf2::Quaternion q(msg_imu.orientation.x,msg_imu.orientation.y,msg_imu.orientation.z,msg_imu.orientation.w);
+    tf2::Matrix3x3 m(q);
+    double t_roll, t_pitch, t_yaw;
+    m.getRPY(t_roll,t_pitch,t_yaw);
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Roll: %f , Pitch: %f, Yaw: %f ",t_roll,t_pitch,t_yaw);
   }
 
 

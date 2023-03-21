@@ -103,7 +103,7 @@ private:
     std::string activate_ntrip_;
     long baud_rate_;
     std::string enu_ned_transform_;
-
+    std::string debug_;
 
     int time_system_;
     int64_t time_sec;
