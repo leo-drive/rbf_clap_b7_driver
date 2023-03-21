@@ -81,6 +81,7 @@ private:
     void publish_twist();
     void publish_orientation();
     double deg2rad(double degree);
+    void read_parameters();
     //Global Parameters//
 
 
