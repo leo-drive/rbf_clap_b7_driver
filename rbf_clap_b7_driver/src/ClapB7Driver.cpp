@@ -171,6 +171,7 @@ ClapB7Driver::ClapB7Driver()
 {
   using namespace std::placeholders;
 
+  read_parameters();
   // Set serial callback
   serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
@@ -180,6 +181,31 @@ ClapB7Driver::ClapB7Driver()
   if (activate_ntrip_ == "true") {
     NTRIP_client_start();
   }
+
+}
+
+void ClapB7Driver::read_parameters(){
+  RCLCPP_INFO(this->get_logger(), "Parameters");
+  RCLCPP_INFO(this->get_logger(), "NTRIP Serial Name: %s\n",serial_name_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Server ID: %s\n",ntrip_server_ip_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP UserName: %s\n",username_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Password: %s\n",password_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP MountPoint: %s\n",mount_point_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Port: %d\n",ntrip_port_);
+  RCLCPP_INFO(this->get_logger(), "Activate NTRIP: %s\n",activate_ntrip_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s\n",clap_data_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Clap INS Data Topic: %s\n",clap_ins_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "IMU Topic: %s\n",imu_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NavSatFix Topic: %s\n",nav_sat_fix_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Autoware Orientation Topic: %s\n",autoware_orientation_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Twist Topic: %s\n",twist_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Time System Selection: %d\n",time_system_);
+  RCLCPP_INFO(this->get_logger(), "ENU -> NED Transform: %s\n",enu_ned_transform_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NavSatFix Frame: %s\n",gnss_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "IMU Frame: %s\n",imu_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s\n",autoware_orientation_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Twist Frame: %s\n",twist_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Debug: %s\n",debug_.c_str());
 
 }
 
