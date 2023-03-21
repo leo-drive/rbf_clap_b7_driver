@@ -5,8 +5,8 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     ld = LaunchDescription()
-    param = os.path.abspath('') + '/src/rbf_clap_b7_driver/rbf_clap_b7_driver/config/clap_b7_driver.param.yaml'
-
+    param = os.path.abspath('') + '/src/sensor_component/external/rbf_sensor_drivers_ros2/src/rbf_clap_b7_driver/rbf_clap_b7_driver/config/clap_b7_driver.param.yaml'
+# src/sensor_component/external/rbf_sensor_drivers_ros2/src/rbf_clap_b7_driver/rbf_clap_b7_driver/launch/rbf_clap_b7_driver.launch.py
     node=Node(
         package = 'rbf_clap_b7_driver',
         name = 'rbf_clap_b7_driver',
