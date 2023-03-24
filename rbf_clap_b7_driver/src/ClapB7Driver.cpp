@@ -18,13 +18,7 @@ int freq_agric = 0;
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
 
-      // General Clap Data Topic
-      clap_data_topic_{this->declare_parameter(
-                               "clap_data",
-                               ParameterValue{"/clap_b7_data"},
-                               ParameterDescriptor{})
-                           .get<std::string>()},
-      
+      // Clap Specific Data Topic
       clap_imu_topic_{this->declare_parameter(
                                "clap_imu_data",
                                ParameterValue{"/clap_imu"},
@@ -143,9 +137,6 @@ ClapB7Driver::ClapB7Driver()
                                       .get<std::string>()},
 
       // Publisher
-      pub_clap_data_{create_publisher<rbf_clap_b7_msgs::msg::ClapData>(
-          clap_data_topic_, rclcpp::QoS{10}, PubAllocT{})},
-      
       pub_clap_imu_{create_publisher<rbf_clap_b7_msgs::msg::ImuData>(
           clap_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
       
@@ -182,6 +173,7 @@ ClapB7Driver::ClapB7Driver()
     NTRIP_client_start();
   }
 
+  RCLCPP_INFO(this->get_logger(), "ClabB7 Driver Initiliazed");
 }
 
 void ClapB7Driver::read_parameters(){
@@ -206,7 +198,7 @@ void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s\n",autoware_orientation_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Twist Frame: %s\n",twist_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Debug: %s\n",debug_.c_str());
-
+  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------",debug_.c_str());
 }
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
@@ -216,11 +208,11 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 
 void ClapB7Driver::timer_callback()
 {
-
-  RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
-  RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
-  RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
-
+  if(debug_ == "true"){
+    RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
+    RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
+    RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
+  }
   freq_rawimu = 0;
   freq_inspvax = 0;
   freq_agric = 0;
@@ -309,6 +301,10 @@ void ClapB7Driver::pub_ins_data() {
   else
   {
     ins_active_ = 1;
+
+    //Prints to terminal once
+    std::call_once(flag_ins_active, [](){RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "INS Active!!!\n");});
+
     publish_nav_sat_fix();
   }
     
@@ -432,7 +428,8 @@ void ClapB7Driver::publish_std_imu(){
     tf2::Matrix3x3 m(q);
     double t_roll, t_pitch, t_yaw;
     m.getRPY(t_roll,t_pitch,t_yaw);
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Roll: %f , Pitch: %f, Yaw: %f ",t_roll,t_pitch,t_yaw);
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Roll: %f , Pitch: %f, Yaw: %f\n",t_roll,t_pitch,t_yaw);
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "------------------------------\n",t_roll,t_pitch,t_yaw);
   }
 
 
@@ -526,7 +523,7 @@ void ClapB7Driver::publish_twist(){
   t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
 
 
-  msg_twist.twist.twist.angular.z = deg2rad(t_angular_speed_z);
+  msg_twist.twist.twist.angular.z = t_angular_speed_z;
 
   msg_twist.twist.covariance[0]  = 0.04;
   msg_twist.twist.covariance[7]  = 10000.0;
@@ -591,12 +588,9 @@ void ClapB7Driver::publish_orientation()
 
   }
 
-
-
   msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_roll;
   msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_pitch;
   msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
-
 
   pub_gnss_orientation_->publish(msg_gnss_orientation);
 

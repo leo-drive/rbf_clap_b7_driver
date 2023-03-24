@@ -13,8 +13,8 @@
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <tf2/LinearMath/Matrix3x3.h>
-
-
+#include <thread>
+#include <mutex>
 
 #include "TermiosSerial.h"
 #include "AsyncSerial.h"
@@ -137,6 +137,8 @@ private:
     libntrip::NtripClient ntripClient;
     int t_size;
     const float g_ = 9.81f;
+
+    std::once_flag flag_ins_active;
 
     rclcpp::TimerBase::SharedPtr timer_;
 };
