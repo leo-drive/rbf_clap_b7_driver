@@ -34,6 +34,8 @@ After this step, you need to enter the relevant places NTRIP settings. These set
 
 ```
 
+## Parameters
+
 Parameter | Description |
 --- | --- |
 param | desc |
