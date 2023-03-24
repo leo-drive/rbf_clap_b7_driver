@@ -397,17 +397,26 @@ void ClapB7Driver::publish_std_imu(){
   }
   if(enu_ned_transform_=="true"){
     //ENU -> NED Transformation
-    ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
-    ins_rot_matrix.setRotation(quart_orient);
-    ins_rot_ = ENU2NED * ins_rot_matrix;
-    ins_rot_.getRotation(quart_orient_corrected);
+    //ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
+    //ins_rot_matrix.setRotation(quart_orient);
+    //ins_rot_ = ENU2NED * ins_rot_matrix;
+    //ins_rot_.getRotation(quart_orient_corrected);
 
 
+    double t_roll,t_pitch,t_yaw;
+    tf2::Matrix3x3 m(quart_orient);
+    m.getRPY(t_roll,t_pitch,t_yaw);
+    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll+180), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw-90), Eigen::Vector3d::UnitZ());
 
-    msg_imu.orientation.set__w(quart_orient_corrected.getW());
-    msg_imu.orientation.set__x(quart_orient_corrected.getX());
-    msg_imu.orientation.set__y(quart_orient_corrected.getY());
-    msg_imu.orientation.set__z(quart_orient_corrected.getZ());
+
+    Eigen::Quaterniond q(angle_axis_x * angle_axis_y * angle_axis_z );
+
+    msg_imu.orientation.set__w(q.w());
+    msg_imu.orientation.set__x(q.x());
+    msg_imu.orientation.set__y(q.y());
+    msg_imu.orientation.set__z(q.z());
 
   }
   else{
@@ -514,7 +523,8 @@ void ClapB7Driver::publish_twist(){
   }
   msg_twist.twist.twist.linear.x = total_speed_linear;
 
-  t_angular_speed_z = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
+  t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
+
 
   msg_twist.twist.twist.angular.z = deg2rad(t_angular_speed_z);
 
@@ -533,7 +543,7 @@ void ClapB7Driver::publish_orientation()
 
   autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
   tf2::Quaternion quart_orient, quart_orient_corrected;
-  tf2::Matrix3x3 ENU2NED, ins_rot_matrix, ins_rot_;
+  tf2::Matrix3x3 ENU2NED, ins_rot_matrix, ins_rot_,clap2ros,ins_corrected_rot_;
 
   msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
   msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(time_sec));
@@ -550,16 +560,27 @@ void ClapB7Driver::publish_orientation()
 
   if(enu_ned_transform_=="true"){
     //ENU -> NED Transformation
-    ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
-    ins_rot_matrix.setRotation(quart_orient);
-    ins_rot_ = ENU2NED * ins_rot_matrix;
-    ins_rot_.getRotation(quart_orient_corrected);
+    // ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
+    // //clap2ros = tf2::Matrix3x3(1, 0, 0, 0, -1, 0, 0, 0, -1);
+    // ins_rot_matrix.setRotation(quart_orient);
+    // ins_rot_ = ENU2NED * ins_rot_matrix;
+    // //ins_corrected_rot_ = ins_rot_ * clap2ros;
+    // ins_rot_.getRotation(quart_orient_corrected);
+    double t_roll,t_pitch,t_yaw;
+    tf2::Matrix3x3 m(quart_orient);
+    m.getRPY(t_roll,t_pitch,t_yaw);
+    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll+180), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw-90), Eigen::Vector3d::UnitZ());
 
 
-    msg_gnss_orientation.orientation.orientation.set__w(quart_orient_corrected.getW());
-    msg_gnss_orientation.orientation.orientation.set__x(quart_orient_corrected.getX());
-    msg_gnss_orientation.orientation.orientation.set__y(quart_orient_corrected.getY());
-    msg_gnss_orientation.orientation.orientation.set__z(quart_orient_corrected.getZ());
+    Eigen::Quaterniond q(angle_axis_x * angle_axis_y * angle_axis_z );
+
+    msg_gnss_orientation.orientation.orientation.set__w(q.w());
+    msg_gnss_orientation.orientation.orientation.set__x(q.x());
+    msg_gnss_orientation.orientation.orientation.set__y(q.y());
+    msg_gnss_orientation.orientation.orientation.set__z(q.z());
+
 
   }
   else{
