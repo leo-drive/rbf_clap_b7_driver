@@ -387,9 +387,26 @@ void ClapB7Driver::publish_std_imu(){
 
   if(ins_active_ == 0){
     quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Heading));
+    
+
+    if(debug_=="true"){
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "-------------RAW-----------\n");
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Roll: %f , Pitch: %f, Yaw: %f\n",clapB7Controller.clap_ArgicData.Roll
+                                                                                 ,clapB7Controller.clap_ArgicData.Pitch
+                                                                                 ,clapB7Controller.clap_ArgicData.Heading);
+    }
+  
   }
   else if(ins_active_ == 1){
     quart_orient.setRPY(deg2rad(clapB7Controller.clapData.roll), deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.azimuth));
+  
+    if(debug_=="true"){
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "-------------RAW-----------\n");
+      RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Roll: %f , Pitch: %f, Yaw: %f\n",clapB7Controller.clapData.roll
+                                                                                 ,clapB7Controller.clapData.pitch
+                                                                                 ,clapB7Controller.clapData.azimuth);
+    }
+  
   }
   if(enu_ned_transform_=="true"){
     //ENU -> NED Transformation
@@ -428,8 +445,8 @@ void ClapB7Driver::publish_std_imu(){
     tf2::Matrix3x3 m(q);
     double t_roll, t_pitch, t_yaw;
     m.getRPY(t_roll,t_pitch,t_yaw);
+    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "-------------CONVERTED-----------\n");
     RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "Roll: %f , Pitch: %f, Yaw: %f\n",t_roll,t_pitch,t_yaw);
-    RCLCPP_INFO(rclcpp::get_logger("rclcpp"), "------------------------------\n",t_roll,t_pitch,t_yaw);
   }
 
 
