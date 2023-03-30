@@ -1,7 +1,7 @@
 uint8 imu_status
-int32 z_accel_output
-int32 y_accel_output
-int32 x_accel_output
-int32 z_gyro_output
-int32 y_gyro_output
-int32 x_gyro_output
+float32 z_accel_output
+float32 y_accel_output
+float32 x_accel_output
+float32 z_gyro_output
+float32 y_gyro_output
+float32 x_gyro_output
