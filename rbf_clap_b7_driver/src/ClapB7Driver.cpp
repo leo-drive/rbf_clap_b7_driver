@@ -419,13 +419,20 @@ void ClapB7Driver::publish_std_imu(){
     double t_roll,t_pitch,t_yaw;
     tf2::Matrix3x3 m(quart_orient);
     m.getRPY(t_roll,t_pitch,t_yaw);
-    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll+180), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw-90), Eigen::Vector3d::UnitZ());
+
+    double t_roll_ = t_roll*180/M_PI;
+    double t_pitch_ = t_pitch*180/M_PI;
+    double t_yaw_ = t_yaw*180/M_PI;
 
 
-    Eigen::Quaterniond q(angle_axis_x * angle_axis_y * angle_axis_z );
+    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
 
+
+    Eigen::Quaterniond p(angle_axis_x * angle_axis_y * angle_axis_z );
+
+    Eigen::Quaterniond q = p.inverse();
     msg_imu.orientation.set__w(q.w());
     msg_imu.orientation.set__x(q.x());
     msg_imu.orientation.set__y(q.y());
@@ -583,12 +590,20 @@ void ClapB7Driver::publish_orientation()
     double t_roll,t_pitch,t_yaw;
     tf2::Matrix3x3 m(quart_orient);
     m.getRPY(t_roll,t_pitch,t_yaw);
-    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll+180), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw-90), Eigen::Vector3d::UnitZ());
+
+    double t_roll_ = t_roll*180/M_PI;
+    double t_pitch_ = t_pitch*180/M_PI;
+    double t_yaw_ = t_yaw*180/M_PI;
 
 
-    Eigen::Quaterniond q(angle_axis_x * angle_axis_y * angle_axis_z );
+    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
+    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
+
+
+    Eigen::Quaterniond p(angle_axis_x * angle_axis_y * angle_axis_z );
+
+    Eigen::Quaterniond q = p.inverse();
 
     msg_gnss_orientation.orientation.orientation.set__w(q.w());
     msg_gnss_orientation.orientation.orientation.set__x(q.x());
