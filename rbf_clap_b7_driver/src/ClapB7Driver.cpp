@@ -49,6 +49,12 @@ ClapB7Driver::ClapB7Driver()
                                  ParameterDescriptor{})
                              .get<std::string>()},
 
+      odom_topic_{this->declare_parameter(
+                                 "odom_topic",
+                                 ParameterValue{"/gnss/odom"},
+                                 ParameterDescriptor{})
+                             .get<std::string>()},
+
 
       autoware_orientation_topic_{this->declare_parameter("autoware_orientation_topic",
                             ParameterValue("/gnss/orientation"),
@@ -155,9 +161,14 @@ ClapB7Driver::ClapB7Driver()
       pub_gnss_orientation_{create_publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>(
           autoware_orientation_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
+      pub_odom_{create_publisher<nav_msgs::msg::Odometry>(
+          "/gnss/odom", rclcpp::QoS{10}, PubAllocT{})},
+
       // Timer
       timer_{this->create_wall_timer(
-          1000ms, std::bind(&ClapB7Driver::timer_callback, this))}
+          1000ms, std::bind(&ClapB7Driver::timer_callback, this))},
+      
+      tf_broadcaster_odom_{nullptr}
 
 {
   using namespace std::placeholders;
@@ -172,6 +183,8 @@ ClapB7Driver::ClapB7Driver()
   if (activate_ntrip_ == "true") {
     NTRIP_client_start();
   }
+
+  tf_broadcaster_odom_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
   RCLCPP_INFO(this->get_logger(), "ClabB7 Driver Initiliazed");
 }
@@ -310,6 +323,7 @@ void ClapB7Driver::pub_ins_data() {
   publish_std_imu();
   publish_twist();
   publish_orientation();
+  publish_odom();
 
   pub_clap_ins_->publish(msg_ins_data);
 
@@ -625,4 +639,239 @@ void ClapB7Driver::publish_orientation()
 
   pub_gnss_orientation_->publish(msg_gnss_orientation);
 
+}
+
+void ClapB7Driver::publish_odom(){
+
+  nav_msgs::msg::Odometry msg_odom;
+  double utm_northing, utm_easting;
+  std::string utm_zone;
+  geometry_msgs::msg::TransformStamped transform;
+
+
+  //Lat-Lon to UTM calculation
+  if (m_utm0_.zone == 0)
+  {
+    initUTM(clapB7Controller.clapData.latitude, clapB7Controller.clapData.longitude, clapB7Controller.clapData.height);
+  }
+
+  LLtoUTM(clapB7Controller.clapData.latitude, clapB7Controller.clapData.longitude, m_utm0_.zone, utm_easting, utm_northing);
+
+  // Compute convergence angle.
+  double longitudeRad      = deg2rad(clapB7Controller.clapData.longitude);
+  double latitudeRad       = deg2rad(clapB7Controller.clapData.latitude);
+  double central_meridian  = deg2rad(computeMeridian(m_utm0_.zone));
+  double convergence_angle = atan(tan(longitudeRad - central_meridian) * sin(latitudeRad));
+
+  // Convert position standard deviations to UTM frame.
+  double std_east  = clapB7Controller.clap_ArgicData.Baseline_EStd;
+  double std_north = clapB7Controller.clap_ArgicData.Baseline_NStd;
+  double std_x = std_north * cos(convergence_angle) - std_east * sin(convergence_angle);
+  double std_y = std_north * sin(convergence_angle) + std_east * cos(convergence_angle);
+  double std_z = clapB7Controller.clap_ArgicData.Xigema_alt;
+
+  // Fill in the message.
+  msg_odom.header.stamp.set__sec(time_sec);
+  msg_odom.header.stamp.set__nanosec(time_nanosec);
+
+  msg_odom.header.set__frame_id("odom");
+  msg_odom.set__child_frame_id(static_cast<std::string>(gnss_frame_));
+
+
+  msg_odom.pose.pose.position.x = utm_easting-m_utm0_.easting;
+  msg_odom.pose.pose.position.y = utm_northing-m_utm0_.northing;
+  msg_odom.pose.pose.position.z = clapB7Controller.clapData.height-m_utm0_.altitude;
+
+  msg_odom.pose.covariance[0*6 + 0] = std_x * std_x;
+  msg_odom.pose.covariance[1*6 + 1] = std_y * std_y;
+  msg_odom.pose.covariance[2*6 + 2] = std_z * std_z;
+  msg_odom.pose.covariance[3*6 + 3] = clapB7Controller.clapData.std_dev_roll * clapB7Controller.clapData.std_dev_roll;
+  msg_odom.pose.covariance[4*6 + 4] = clapB7Controller.clapData.std_dev_pitch * clapB7Controller.clapData.std_dev_pitch;
+  msg_odom.pose.covariance[5*6 + 5] = clapB7Controller.clapData.std_dev_azimuth * clapB7Controller.clapData.std_dev_azimuth;
+  
+  //The twist message gives the linear and angular velocity relative to the frame defined in child_frame_id
+  //Lİnear x-y-z hızlari yanlis olabilir
+  msg_odom.twist.twist.linear.x      = clapB7Controller.clap_ArgicData.Velocity_E;
+  msg_odom.twist.twist.linear.y      = clapB7Controller.clap_ArgicData.Velocity_N;
+  msg_odom.twist.twist.linear.z      = clapB7Controller.clap_ArgicData.Velocity_U;
+  msg_odom.twist.twist.angular.x     = clapB7Controller.clap_RawimuMsgs.x_gyro_output;
+  msg_odom.twist.twist.angular.y     = clapB7Controller.clap_RawimuMsgs.y_gyro_output;
+  msg_odom.twist.twist.angular.z     = clapB7Controller.clap_RawimuMsgs.z_gyro_output;
+  msg_odom.twist.covariance[0*6 + 0] = clapB7Controller.clapData.std_dev_east_velocity * clapB7Controller.clapData.std_dev_east_velocity;
+  msg_odom.twist.covariance[1*6 + 1] = clapB7Controller.clapData.std_dev_north_velocity * clapB7Controller.clapData.std_dev_north_velocity;
+  msg_odom.twist.covariance[2*6 + 2] = clapB7Controller.clapData.std_dev_up_velocity * clapB7Controller.clapData.std_dev_up_velocity;
+  msg_odom.twist.covariance[3*6 + 3] = 0;
+  msg_odom.twist.covariance[4*6 + 4] = 0;
+  msg_odom.twist.covariance[5*6 + 5] = 0;
+  
+  publish_transform(msg_odom.header.frame_id, msg_odom.child_frame_id, msg_odom.pose.pose,transform);
+  pub_odom_->publish(msg_odom);
+
+}
+
+double ClapB7Driver::computeMeridian(int zone_number){
+
+  double meridian = 0.0;
+  if(zone_number > 0){
+    meridian = (zone_number - 1) * 6 - 180 + 3;
+  }
+  return meridian;
+
+}
+
+void ClapB7Driver::initUTM(double Lat, double Long, double altitude){
+
+  int zoneNumber;
+
+  // Make sure the longitude is between -180.00 .. 179.9
+  double LongTemp = (Long+180)-int((Long+180)/360)*360-180;
+
+  zoneNumber = int((LongTemp + 180)/6) + 1;
+
+  if( Lat >= 56.0 && Lat < 64.0 && LongTemp >= 3.0 && LongTemp < 12.0 )
+  {
+    zoneNumber = 32;
+  }
+
+  // Special zones for Svalbard
+  if( Lat >= 72.0 && Lat < 84.0 )
+  {
+    if(      LongTemp >= 0.0  && LongTemp <  9.0 ) zoneNumber = 31;
+    else if( LongTemp >= 9.0  && LongTemp < 21.0 ) zoneNumber = 33;
+    else if( LongTemp >= 21.0 && LongTemp < 33.0 ) zoneNumber = 35;
+    else if( LongTemp >= 33.0 && LongTemp < 42.0 ) zoneNumber = 37;
+  }
+
+  m_utm0_.zone = zoneNumber;
+  m_utm0_.altitude = altitude;
+  LLtoUTM(Lat, Long, m_utm0_.zone, m_utm0_.northing, m_utm0_.easting);
+
+  RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"initialized from lat:%f long:%f UTM zone %d%c: easting:%fm (%dkm) northing:%fm (%dkm)"
+  , Lat, Long, m_utm0_.zone, UTMLetterDesignator(Lat)
+  , m_utm0_.easting, (int)(m_utm0_.easting)/1000
+  , m_utm0_.northing, (int)(m_utm0_.northing)/1000);
+
+}
+
+/*
+ * Modification of gps_common::LLtoUTM() to use a constant UTM zone.
+ *
+ * Convert lat/long to UTM coords.  Equations from USGS Bulletin 1532
+ *
+ * East Longitudes are positive, West longitudes are negative.
+ * North latitudes are positive, South latitudes are negative
+ * Lat and Long are in fractional degrees
+ *
+ * Originally written by Chuck Gantz- chuck.gantz@globalstar.com.
+ */
+void ClapB7Driver::LLtoUTM(double Lat, double Long, int zoneNumber, 
+                            double &UTMNorthing, double &UTMEasting){
+
+const double RADIANS_PER_DEGREE = M_PI/180.0;
+
+  // WGS84 Parameters
+  const double WGS84_A = 6378137.0;        // major axis
+  const double WGS84_E = 0.0818191908;     // first eccentricity
+
+  // UTM Parameters
+  const double UTM_K0 = 0.9996;            // scale factor
+  const double UTM_E2 = (WGS84_E*WGS84_E); // e^2
+
+  double a = WGS84_A;
+  double eccSquared = UTM_E2;
+  double k0 = UTM_K0;
+
+  double LongOrigin;
+  double eccPrimeSquared;
+  double N, T, C, A, M;
+
+  // Make sure the longitude is between -180.00 .. 179.9
+  double LongTemp = (Long+180)-int((Long+180)/360)*360-180;
+
+  double LatRad = Lat*RADIANS_PER_DEGREE;
+  double LongRad = LongTemp*RADIANS_PER_DEGREE;
+  double LongOriginRad;
+
+  // +3 puts origin in middle of zone
+  LongOrigin = (zoneNumber - 1)*6 - 180 + 3;
+  LongOriginRad = LongOrigin * RADIANS_PER_DEGREE;
+
+  eccPrimeSquared = (eccSquared)/(1-eccSquared);
+
+  N = a/sqrt(1-eccSquared*sin(LatRad)*sin(LatRad));
+  T = tan(LatRad)*tan(LatRad);
+  C = eccPrimeSquared*cos(LatRad)*cos(LatRad);
+  A = cos(LatRad)*(LongRad-LongOriginRad);
+
+  M = a*((1 - eccSquared/4      - 3*eccSquared*eccSquared/64     - 5*eccSquared*eccSquared*eccSquared/256)*LatRad
+            - (3*eccSquared/8   + 3*eccSquared*eccSquared/32    + 45*eccSquared*eccSquared*eccSquared/1024)*sin(2*LatRad)
+                                + (15*eccSquared*eccSquared/256 + 45*eccSquared*eccSquared*eccSquared/1024)*sin(4*LatRad)
+                                - (35*eccSquared*eccSquared*eccSquared/3072)*sin(6*LatRad));
+
+  UTMEasting = (double)(k0*N*(A+(1-T+C)*A*A*A/6
+    + (5-18*T+T*T+72*C-58*eccPrimeSquared)*A*A*A*A*A/120)
+    + 500000.0);
+
+  UTMNorthing = (double)(k0*(M+N*tan(LatRad)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24
+    + (61-58*T+T*T+600*C-330*eccPrimeSquared)*A*A*A*A*A*A/720)));
+
+  if(Lat < 0)
+  {
+    UTMNorthing += 10000000.0; //10000000 meter offset for southern hemisphere
+  }
+}
+
+void ClapB7Driver::publish_transform(
+  const std::string &ref_parent_frame_id, 
+  const std::string &ref_child_frame_id,
+  const geometry_msgs::msg::Pose &ref_pose, 
+  geometry_msgs::msg::TransformStamped &ref_transform){
+
+
+  ref_transform.header.stamp.set__sec(time_sec);
+  ref_transform.header.stamp.set__nanosec(time_nanosec);
+
+  ref_transform.header.frame_id = ref_parent_frame_id;
+  ref_transform.child_frame_id = ref_child_frame_id;
+
+  ref_transform.transform.translation.set__x(ref_pose.position.x);
+  ref_transform.transform.translation.set__y(ref_pose.position.y);
+  ref_transform.transform.translation.set__z(ref_pose.position.z);
+
+  ref_transform.transform.rotation.set__x(ref_pose.orientation.x);
+  ref_transform.transform.rotation.set__y(ref_pose.orientation.y);
+  ref_transform.transform.rotation.set__z(ref_pose.orientation.z);
+  ref_transform.transform.rotation.set__w(ref_pose.orientation.w);
+
+  tf_broadcaster_odom_->sendTransform(ref_transform);
+
+
+}
+char ClapB7Driver::UTMLetterDesignator(double Lat)
+{
+	char LetterDesignator;
+
+	if     ((84 >= Lat) && (Lat >= 72))  LetterDesignator = 'X';
+	else if ((72 > Lat) && (Lat >= 64))  LetterDesignator = 'W';
+	else if ((64 > Lat) && (Lat >= 56))  LetterDesignator = 'V';
+	else if ((56 > Lat) && (Lat >= 48))  LetterDesignator = 'U';
+	else if ((48 > Lat) && (Lat >= 40))  LetterDesignator = 'T';
+	else if ((40 > Lat) && (Lat >= 32))  LetterDesignator = 'S';
+	else if ((32 > Lat) && (Lat >= 24))  LetterDesignator = 'R';
+	else if ((24 > Lat) && (Lat >= 16))  LetterDesignator = 'Q';
+	else if ((16 > Lat) && (Lat >= 8))   LetterDesignator = 'P';
+	else if (( 8 > Lat) && (Lat >= 0))   LetterDesignator = 'N';
+	else if (( 0 > Lat) && (Lat >= -8))  LetterDesignator = 'M';
+	else if ((-8 > Lat) && (Lat >= -16)) LetterDesignator = 'L';
+	else if((-16 > Lat) && (Lat >= -24)) LetterDesignator = 'K';
+	else if((-24 > Lat) && (Lat >= -32)) LetterDesignator = 'J';
+	else if((-32 > Lat) && (Lat >= -40)) LetterDesignator = 'H';
+	else if((-40 > Lat) && (Lat >= -48)) LetterDesignator = 'G';
+	else if((-48 > Lat) && (Lat >= -56)) LetterDesignator = 'F';
+	else if((-56 > Lat) && (Lat >= -64)) LetterDesignator = 'E';
+	else if((-64 > Lat) && (Lat >= -72)) LetterDesignator = 'D';
+	else if((-72 > Lat) && (Lat >= -80)) LetterDesignator = 'C';
+    // 'Z' is an error flag, the Latitude is outside the UTM limits
+	else LetterDesignator = 'Z';
+	return LetterDesignator;
 }

@@ -26,10 +26,12 @@
 #include "sensor_msgs/msg/nav_sat_fix.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "geometry_msgs/msg/quaternion.hpp"
+#include "geometry_msgs/msg/transform_stamped.hpp"
 #include <tf2/LinearMath/Quaternion.h>
 #include <autoware_sensing_msgs/msg/gnss_ins_orientation_stamped.hpp>
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
-
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -71,6 +73,14 @@ public:
     void serial_receive_callback(const char *data, unsigned int len);
 
 private:
+
+    typedef struct _UTM0
+    {
+        double			easting;
+        double			northing;
+        double			altitude;
+        int				zone;
+    } UTM0;
     
     void timer_callback();
     void pub_imu_data();
@@ -82,8 +92,22 @@ private:
     void publish_standart_msgs_agric();
     void publish_twist();
     void publish_orientation();
+    void publish_odom();
+    void publish_transform(const std::string &ref_parent_frame_id, 
+                            const std::string &ref_child_frame_id,
+                            const geometry_msgs::msg::Pose &ref_pose, 
+                            geometry_msgs::msg::TransformStamped &ref_transform);
+    
     double deg2rad(double degree);
     void read_parameters();
+
+    void LLtoUTM(double Lat, double Long, int zoneNumber, double &UTMNorthing, double &UTMEasting);
+    double computeMeridian(int zone_number);
+    void initUTM(double Lat, double Long, double altitude);
+
+    char UTMLetterDesignator(double Lat);
+
+
     //Global Parameters//
 
 
@@ -95,6 +119,7 @@ private:
     std::string nav_sat_fix_topic_;
     std::string autoware_orientation_topic_;
     std::string twist_topic_;
+    std::string odom_topic_;
 
     //NTRIP Parameters
     std::string serial_name_;
@@ -113,13 +138,16 @@ private:
     int64_t time_nanosec;
 
     bool ins_active_;
-    
+
+    UTM0 m_utm0_;    
+
+    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_odom_;
+
     //Frame Names
     std::string gnss_frame_;
     std::string imu_frame_;
     std::string autoware_orientation_frame_;
     std::string twist_frame_;
-
 
     CallbackAsyncSerial serial_boost;
 
@@ -131,6 +159,7 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
     rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr pub_twist_;
+    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
 
     ClapB7Controller clapB7Controller;
     uint8_t ntrip_status_ = 0;
@@ -142,3 +171,5 @@ private:
 
     rclcpp::TimerBase::SharedPtr timer_;
 };
+
+

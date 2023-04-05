@@ -1,12 +1,12 @@
 rbf_clap_b7_driver:
   ros__parameters:
-    serial_name: "/dev/ttyACM0"
+    serial_name: "/dev/ttyUSB0"
     parse_type: "BINARY"
     baud_rate: 460800
-    activate_ntrip: "true"
+    activate_ntrip: "false"
     ntrip_ip: "212.156.70.42"
-    ntrip_user_name: "K073432501"
-    ntrip_password: "GR3g4"
+    ntrip_user_name: "K0734151301"
+    ntrip_password: "GzMSQg"
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
     # Topics
@@ -16,13 +16,14 @@ rbf_clap_b7_driver:
     nav_sat_fix_topic: "/gnss/gps"
     autoware_orientation_topic: "/gnss/autoware_orientation"
     twist_topic: "/gnss/twist"
+    odom_topic: "/gnss/odom"
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     
     time_system_selection: 0
 
     ### ENU -> NED Transform Selection
-    enu_ned_transform: "true"
+    enu_ned_transform: "false"
 
     #Frame values
     gnss_frame: "gnss"
