@@ -85,7 +85,7 @@ private:
     void timer_callback();
     void pub_imu_data();
     void pub_ins_data();
-    int NTRIP_client_start();
+    void NTRIP_client_start();
     void publish_nav_sat_fix();
     void publish_std_imu();
     int64_t ros_time_to_gps_time_nano();

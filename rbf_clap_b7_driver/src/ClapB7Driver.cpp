@@ -74,21 +74,18 @@ ClapB7Driver::ClapB7Driver()
                          ParameterDescriptor{})
                      .get<long>()},
 
-      serial_boost(serial_name_, baud_rate_),
-
-
       ntrip_server_ip_{this->declare_parameter("ntrip_ip",
                                                      ParameterValue("212.156.70.42"),
                                                      ParameterDescriptor{})
                                      .get<std::string>()},
 
       username_{this->declare_parameter("ntrip_user_name",
-                                              ParameterValue("K073432501"),
+                                              ParameterValue("K0734151301"),
                                               ParameterDescriptor{})
                               .get<std::string>()},
 
       password_{this->declare_parameter("ntrip_password",
-                                              ParameterValue("GR3g4"),
+                                              ParameterValue("GzMSQg"),
                                               ParameterDescriptor{})
                               .get<std::string>()},
 
@@ -175,13 +172,41 @@ ClapB7Driver::ClapB7Driver()
 
   read_parameters();
   // Set serial callback
-  serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
+  try{
+    serial_boost.open(serial_name_, baud_rate_);
+  }catch(boost::system::system_error& e){
+
+    RCLCPP_ERROR(this->get_logger(), "\033[1;31m ClapB7 Serial port could not be opened: \033[0m  %s", e.what());
+        
+  }
+
+  if(serial_boost.isOpen() == false){
+    RCLCPP_INFO(
+        rclcpp::get_logger("rclcpp"), 
+        "\033[1;31m ClapB7 Serial port %s could not be opened, plug and relaunch the package\033[0m\n",serial_name_.c_str());
+  }
+  else if(serial_boost.isOpen() == true){
+    RCLCPP_INFO(
+        rclcpp::get_logger("rclcpp"), 
+        "\033[1;32m Serial port %s opened!!!\033[0m\n",serial_name_.c_str());
+    // setting the serial receive callback function
+    serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
+
+  }
   // Init ClapB7
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
 
   if (activate_ntrip_ == "true") {
+
     NTRIP_client_start();
+    if(ntripClient.service_is_running()){
+      RCLCPP_INFO(this->get_logger(), "\033[1;31m NTRIP client connected \033[0m",ntripClient.service_is_running());
+    }
+    else{
+      RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client cannot connected \033[0m",ntripClient.service_is_running());
+
+    }
   }
 
   tf_broadcaster_odom_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
@@ -191,26 +216,26 @@ ClapB7Driver::ClapB7Driver()
 
 void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "Parameters");
-  RCLCPP_INFO(this->get_logger(), "NTRIP Serial Name: %s\n",serial_name_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP Server ID: %s\n",ntrip_server_ip_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP UserName: %s\n",username_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP Password: %s\n",password_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP MountPoint: %s\n",mount_point_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP Port: %d\n",ntrip_port_);
-  RCLCPP_INFO(this->get_logger(), "Activate NTRIP: %s\n",activate_ntrip_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s\n",clap_data_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Clap INS Data Topic: %s\n",clap_ins_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "IMU Topic: %s\n",imu_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NavSatFix Topic: %s\n",nav_sat_fix_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Autoware Orientation Topic: %s\n",autoware_orientation_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Twist Topic: %s\n",twist_topic_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Time System Selection: %d\n",time_system_);
-  RCLCPP_INFO(this->get_logger(), "ENU -> NED Transform: %s\n",enu_ned_transform_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NavSatFix Frame: %s\n",gnss_frame_.c_str());
-  RCLCPP_INFO(this->get_logger(), "IMU Frame: %s\n",imu_frame_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s\n",autoware_orientation_frame_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Twist Frame: %s\n",twist_frame_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Debug: %s\n",debug_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Serial Name: %s",serial_name_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Server ID: %s",ntrip_server_ip_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP UserName: %s",username_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Password: %s",password_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP MountPoint: %s",mount_point_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NTRIP Port: %d",ntrip_port_);
+  RCLCPP_INFO(this->get_logger(), "Activate NTRIP: %s",activate_ntrip_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s",clap_data_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Clap INS Data Topic: %s",clap_ins_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "IMU Topic: %s",imu_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NavSatFix Topic: %s",nav_sat_fix_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Autoware Orientation Topic: %s",autoware_orientation_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Twist Topic: %s",twist_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Time System Selection: %d",time_system_);
+  RCLCPP_INFO(this->get_logger(), "ENU -> NED Transform: %s",enu_ned_transform_.c_str());
+  RCLCPP_INFO(this->get_logger(), "NavSatFix Frame: %s",gnss_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "IMU Frame: %s",imu_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s",autoware_orientation_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Twist Frame: %s",twist_frame_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Debug: %s",debug_.c_str());
   RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------",debug_.c_str());
 }
 
@@ -438,7 +463,7 @@ void ClapB7Driver::publish_std_imu(){
     double t_yaw_ = t_yaw*180/M_PI;
 
 
-    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_), Eigen::Vector3d::UnitX());
+    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
     Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
     Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
 
@@ -493,25 +518,9 @@ void ClapB7Driver::publish_std_imu(){
 
   pub_imu_->publish(msg_imu);
 
-  /*
-double t_roll, t_pitch, t_yaw;
-
-  t_pitch = 180 * atan(clapB7Controller.clap_RawimuMsgs.x_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.y_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
-
-  t_roll = 180 * atan(clapB7Controller.clap_RawimuMsgs.y_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
-
-  t_yaw = 180 * atan(clapB7Controller.clap_RawimuMsgs.z_accel_output / sqrt(std::pow(clapB7Controller.clap_RawimuMsgs.x_accel_output, 2) + std::pow(clapB7Controller.clap_RawimuMsgs.z_accel_output, 2))) / M_PI;
-  float old = 0;
-
-  float delta_theta_z = (clapB7Controller.clap_RawimuMsgs.z_accel_output - old) * 0.01;
-
-  old = clapB7Controller.clap_RawimuMsgs.z_accel_output;
-
-  t_yaw += delta_theta_z * 180 / M_PI;
-  */
 }
 
-int ClapB7Driver::NTRIP_client_start()
+void ClapB7Driver::NTRIP_client_start()
 {
 
   ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
