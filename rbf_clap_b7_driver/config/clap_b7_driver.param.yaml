@@ -10,13 +10,13 @@ rbf_clap_b7_driver:
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
     # Topics
-    clap_imu_data: "/clap_imu"
-    clap_ins_data: "/clap_ins"
-    imu_topic: "/gnss/imu"
-    nav_sat_fix_topic: "/gnss/gps"
-    autoware_orientation_topic: "/gnss/autoware_orientation"
-    twist_topic: "/gnss/twist"
-    odom_topic: "/gnss/odom"
+    clap_imu_data: "clap_imu"
+    clap_ins_data: "clap_ins"
+    imu_topic: "gnss/imu"
+    nav_sat_fix_topic: "gnss/gps"
+    autoware_orientation_topic: "gnss/autoware_orientation"
+    twist_topic: "gnss/twist"
+    odom_topic: "gnss/odom"
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     
@@ -26,9 +26,9 @@ rbf_clap_b7_driver:
     enu_ned_transform: "false"
 
     #Frame values
-    gnss_frame: "gnss"
-    imu_frame: "gnss"
-    autoware_orientation_frame: "gnss"
-    twist_frame: "gnss"
+    gnss_frame: "gnss_ins_link"
+    imu_frame: "gnss_ins_link"
+    autoware_orientation_frame: "gnss_ins_link"
+    twist_frame: "gnss_ins_link"
 
-    debug: "true"
+    debug: "false"

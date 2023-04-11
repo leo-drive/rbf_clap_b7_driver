@@ -21,43 +21,43 @@ ClapB7Driver::ClapB7Driver()
       // Clap Specific Data Topic
       clap_imu_topic_{this->declare_parameter(
                                "clap_imu_data",
-                               ParameterValue{"/clap_imu"},
+                               ParameterValue{"clap_imu"},
                                ParameterDescriptor{})
                            .get<std::string>()},
       
       clap_ins_topic_{this->declare_parameter(
                                "clap_ins_data",
-                               ParameterValue{"/clap_ins"},
+                               ParameterValue{"clap_ins"},
                                ParameterDescriptor{})
                            .get<std::string>()},
       // Std. imu topic
       imu_topic_{this->declare_parameter(
                          "imu_topic",
-                         ParameterValue{"/gnss/imu"},
+                         ParameterValue{"gnss/imu"},
                          ParameterDescriptor{})
                      .get<std::string>()},
       // std. msgs
       nav_sat_fix_topic_{this->declare_parameter(
                                  "nav_sat_fix_topic",
-                                 ParameterValue{"/gnss/gps"},
+                                 ParameterValue{"gnss/gps"},
                                  ParameterDescriptor{})
                              .get<std::string>()},
       
       twist_topic_{this->declare_parameter(
                                  "twist_topic",
-                                 ParameterValue{"/gnss/twist"},
+                                 ParameterValue{"gnss/twist"},
                                  ParameterDescriptor{})
                              .get<std::string>()},
 
       odom_topic_{this->declare_parameter(
                                  "odom_topic",
-                                 ParameterValue{"/gnss/odom"},
+                                 ParameterValue{"gnss/odom"},
                                  ParameterDescriptor{})
                              .get<std::string>()},
 
 
       autoware_orientation_topic_{this->declare_parameter("autoware_orientation_topic",
-                            ParameterValue("/gnss/orientation"),
+                            ParameterValue("gnss/autoware_orientation"),
                             ParameterDescriptor{})
         .get<std::string>()},
 
@@ -90,7 +90,7 @@ ClapB7Driver::ClapB7Driver()
                               .get<std::string>()},
 
       debug_{this->declare_parameter("debug",
-                                        ParameterValue("true"),
+                                        ParameterValue("false"),
                                         ParameterDescriptor{})
                   .get<std::string>()},
 
@@ -172,6 +172,8 @@ ClapB7Driver::ClapB7Driver()
 
   read_parameters();
   // Set serial callback
+  tf_broadcaster_odom_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
+
 
   try{
     serial_boost.open(serial_name_, baud_rate_);
@@ -208,8 +210,6 @@ ClapB7Driver::ClapB7Driver()
 
     }
   }
-
-  tf_broadcaster_odom_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
   RCLCPP_INFO(this->get_logger(), "ClabB7 Driver Initiliazed");
 }
@@ -697,7 +697,7 @@ void ClapB7Driver::publish_odom(){
   msg_odom.pose.covariance[3*6 + 3] = clapB7Controller.clapData.std_dev_roll * clapB7Controller.clapData.std_dev_roll;
   msg_odom.pose.covariance[4*6 + 4] = clapB7Controller.clapData.std_dev_pitch * clapB7Controller.clapData.std_dev_pitch;
   msg_odom.pose.covariance[5*6 + 5] = clapB7Controller.clapData.std_dev_azimuth * clapB7Controller.clapData.std_dev_azimuth;
-  
+
   //The twist message gives the linear and angular velocity relative to the frame defined in child_frame_id
   //Lİnear x-y-z hızlari yanlis olabilir
   msg_odom.twist.twist.linear.x      = clapB7Controller.clap_ArgicData.Velocity_E;
@@ -712,7 +712,7 @@ void ClapB7Driver::publish_odom(){
   msg_odom.twist.covariance[3*6 + 3] = 0;
   msg_odom.twist.covariance[4*6 + 4] = 0;
   msg_odom.twist.covariance[5*6 + 5] = 0;
-  
+
   publish_transform(msg_odom.header.frame_id, msg_odom.child_frame_id, msg_odom.pose.pose,transform);
   pub_odom_->publish(msg_odom);
 
