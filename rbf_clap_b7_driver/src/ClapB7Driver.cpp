@@ -200,13 +200,12 @@ ClapB7Driver::ClapB7Driver()
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
 
   if (activate_ntrip_ == "true") {
-
-    NTRIP_client_start();
-    if(ntripClient.service_is_running()){
-      RCLCPP_INFO(this->get_logger(), "\033[1;31m NTRIP client connected \033[0m",ntripClient.service_is_running());
+    
+    if(NTRIP_client_start()){
+      RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client connected \033[0m");
     }
     else{
-      RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client cannot connected \033[0m",ntripClient.service_is_running());
+      RCLCPP_INFO(this->get_logger(), "\033[1;31m NTRIP client cannot connected \033[0m");
 
     }
   }
@@ -520,7 +519,7 @@ void ClapB7Driver::publish_std_imu(){
 
 }
 
-void ClapB7Driver::NTRIP_client_start()
+bool ClapB7Driver::NTRIP_client_start()
 {
 
   ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
@@ -530,13 +529,17 @@ void ClapB7Driver::NTRIP_client_start()
                              serial_boost.write(buffer, size);
 
                              t_size += size;
+                             if(debug_ == "true"){
+                              RCLCPP_INFO(this->get_logger(), "NTRIP Data size: %d",t_size);
+                              RCLCPP_INFO(this->get_logger(), "NTRIP Status: %d",ntripClient.service_is_running());
+                             }
 
-                             std::cout << "NTRIP:" << t_size << std::endl; });
+                          });
 
   ntripClient.set_location(41.018893949, 28.890924848);
 
   ntripClient.set_report_interval(0.001);
-  ntrip_status_ = ntripClient.Run();
+  return ntripClient.Run();
 }
 
 int64_t ClapB7Driver::ros_time_to_gps_time_nano()
