@@ -1,6 +1,6 @@
 /**:
   ros__parameters:
-    serial_name: "/dev/ttyCLAP"
+    serial_name: "/dev/ttyUSB0"
     parse_type: "BINARY"
     baud_rate: 460800
     activate_ntrip: "true"
@@ -10,13 +10,13 @@
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
     # Topics
-    clap_imu_data: "clap_imu"
-    clap_ins_data: "clap_ins"
-    imu_topic: "gnss/imu"
-    nav_sat_fix_topic: "gnss/gps"
-    autoware_orientation_topic: "gnss/autoware_orientation"
-    twist_topic: "gnss/twist"
-    odom_topic: "gnss/odom"
+    clap_imu_data: "clap/clap_msgs/clap_imu"
+    clap_ins_data: "clap/clap_msgs/clap_ins"
+    imu_topic: "clap/ros/imu"
+    nav_sat_fix_topic: "clap/ros/gps_nav_sat_fix"
+    autoware_orientation_topic: "clap/autoware_orientation"
+    twist_topic: "clap/ros/twist_with_covariance_stamped"
+    odom_topic: "clap/ros/odom"
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     
@@ -31,4 +31,4 @@
     autoware_orientation_frame: "gnss_ins_link"
     twist_frame: "gnss_ins_link"
 
-    debug: "false"
+    debug: "true"

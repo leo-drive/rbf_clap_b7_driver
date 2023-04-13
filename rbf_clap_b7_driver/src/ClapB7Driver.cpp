@@ -159,7 +159,7 @@ ClapB7Driver::ClapB7Driver()
           autoware_orientation_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       pub_odom_{create_publisher<nav_msgs::msg::Odometry>(
-          "/gnss/odom", rclcpp::QoS{10}, PubAllocT{})},
+          odom_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       // Timer
       timer_{this->create_wall_timer(
