@@ -132,6 +132,8 @@ private:
     long baud_rate_;
     std::string enu_ned_transform_;
     std::string debug_;
+    double ntrip_lat_;
+    double ntrip_lon_;
 
     int time_system_;
     int64_t time_sec;

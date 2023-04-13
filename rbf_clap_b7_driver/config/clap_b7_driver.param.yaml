@@ -9,6 +9,8 @@
     ntrip_password: "GzMSQg"
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
+    ntrip_lat: 41.018893949 
+    ntrip_lon: 28.890924848
     # Topics
     clap_imu_data: "clap_imu"
     clap_ins_data: "clap_ins"
@@ -31,4 +33,4 @@
     autoware_orientation_frame: "gnss_ins_link"
     twist_frame: "gnss_ins_link"
 
-    debug: "false"
+    debug: "true"

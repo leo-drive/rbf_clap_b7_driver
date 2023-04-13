@@ -108,6 +108,18 @@ ClapB7Driver::ClapB7Driver()
                                               ParameterDescriptor{})
                                .get<std::string>()},
 
+      ntrip_lat_{this->declare_parameter(
+                         "ntrip_lat",
+                         ParameterValue{41.018893949 },
+                         ParameterDescriptor{})
+                     .get<double>()},
+
+      ntrip_lon_{this->declare_parameter(
+                         "ntrip_lon",
+                         ParameterValue{28.890924848},
+                         ParameterDescriptor{})
+                     .get<double>()},
+
       enu_ned_transform_{this->declare_parameter("enu_ned_transform",
                                               ParameterValue("true"),
                                               ParameterDescriptor{})
@@ -169,8 +181,10 @@ ClapB7Driver::ClapB7Driver()
 
 {
   using namespace std::placeholders;
-
-  read_parameters();
+  
+  if(debug_ == "true"){
+    read_parameters();
+  }
   // Set serial callback
   tf_broadcaster_odom_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
@@ -200,7 +214,7 @@ ClapB7Driver::ClapB7Driver()
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
 
   if (activate_ntrip_ == "true") {
-    
+
     if(NTRIP_client_start()){
       RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client connected \033[0m");
     }
@@ -214,13 +228,15 @@ ClapB7Driver::ClapB7Driver()
 }
 
 void ClapB7Driver::read_parameters(){
-  RCLCPP_INFO(this->get_logger(), "Parameters");
+  RCLCPP_INFO(this->get_logger(), "ClapB7 Driver Parameters");
   RCLCPP_INFO(this->get_logger(), "NTRIP Serial Name: %s",serial_name_.c_str());
   RCLCPP_INFO(this->get_logger(), "NTRIP Server ID: %s",ntrip_server_ip_.c_str());
   RCLCPP_INFO(this->get_logger(), "NTRIP UserName: %s",username_.c_str());
   RCLCPP_INFO(this->get_logger(), "NTRIP Password: %s",password_.c_str());
   RCLCPP_INFO(this->get_logger(), "NTRIP MountPoint: %s",mount_point_.c_str());
   RCLCPP_INFO(this->get_logger(), "NTRIP Port: %d",ntrip_port_);
+  RCLCPP_INFO(this->get_logger(), "NTRIP Initial Latitude: %.9lf",ntrip_lat_);
+  RCLCPP_INFO(this->get_logger(), "NTRIP Initial Longitude: %.9lf",ntrip_lon_);
   RCLCPP_INFO(this->get_logger(), "Activate NTRIP: %s",activate_ntrip_.c_str());
   RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s",clap_data_topic_.c_str());
   RCLCPP_INFO(this->get_logger(), "Clap INS Data Topic: %s",clap_ins_topic_.c_str());
