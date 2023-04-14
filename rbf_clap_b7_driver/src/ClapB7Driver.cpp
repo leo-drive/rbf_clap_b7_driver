@@ -591,7 +591,7 @@ void ClapB7Driver::publish_orientation()
 
     Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
     Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_+90), Eigen::Vector3d::UnitZ());
+    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
 
 
     Eigen::Quaterniond p(angle_axis_x * angle_axis_y * angle_axis_z );
