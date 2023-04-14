@@ -245,11 +245,11 @@ void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 
 void ClapB7Driver::timer_callback()
 {
-  // if(debug_ == "true"){
-  //   RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
-  //   RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
-  //   RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
-  // }
+  if(debug_ == "true"){
+    RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
+    RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
+    RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
+  }
   freq_rawimu = 0;
   freq_inspvax = 0;
   freq_agric = 0;
