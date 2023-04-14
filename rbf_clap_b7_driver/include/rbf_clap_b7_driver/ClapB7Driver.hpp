@@ -107,9 +107,7 @@ private:
 
     char UTMLetterDesignator(double Lat);
 
-
-    //Global Parameters//
-
+    void transform_enu_to_ned(double &x, double &y, double &z);
 
     //Topics
     std::string clap_data_topic_;
