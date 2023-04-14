@@ -591,7 +591,7 @@ void ClapB7Driver::publish_orientation()
 
     Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
     Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
+    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_+90), Eigen::Vector3d::UnitZ());
 
 
     Eigen::Quaterniond p(angle_axis_x * angle_axis_y * angle_axis_z );
@@ -684,7 +684,7 @@ void ClapB7Driver::publish_odom(){
   msg_odom.twist.covariance[4*6 + 4] = 0;
   msg_odom.twist.covariance[5*6 + 5] = 0;
 
-  publish_transform(msg_odom.header.frame_id, msg_odom.child_frame_id, msg_odom.pose.pose,transform);
+  publish_transform(msg_odom.header.frame_id, "dummy", msg_odom.pose.pose,transform);
   pub_odom_->publish(msg_odom);
 
 }
