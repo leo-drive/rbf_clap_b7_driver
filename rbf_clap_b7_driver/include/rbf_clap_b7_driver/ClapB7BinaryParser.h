@@ -20,7 +20,7 @@
 
 #define RAWIMU_MSG_ID    268U
 #define INSPVAX_MSG_ID   1465U
-
+#define BESTGNSS_MSG_ID  1430U
 
 typedef enum
 {
@@ -189,6 +189,18 @@ struct __attribute__((packed)) ClapB7_RawimuMsgs_ {
     int crc;
 };
 
+struct __attribute__((packed)) ClapB7_BestGnssMsgs_ {
+    uint32_t sol_status;
+    uint32_t vel_type;
+    float latency;
+    float age;
+    double horizontal_speed;
+    double track_angle;
+    double vertical_speed;
+    uint32_t reserved;
+    int32_t crc_hex;
+};
+
 typedef struct
 {
     uint16_t dataIndex;
@@ -199,6 +211,7 @@ typedef struct
     ClapB7_AgricMsg_    clap_ArgicData;
     ClapB7_InspvaxMsgs_ clapData;
     ClapB7_RawimuMsgs_  clap_RawimuMsgs;
+    ClapB7_BestGnssMsgs_ clap_BestGnssData;
     std::function<void()> ins_parser;
     std::function<void()> imu_parser;
 } ClapB7Controller;

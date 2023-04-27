@@ -235,7 +235,7 @@ void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s",autoware_orientation_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Twist Frame: %s",twist_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Debug: %s",debug_.c_str());
-  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------",debug_.c_str());
+  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------");
 }
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
@@ -249,6 +249,15 @@ void ClapB7Driver::timer_callback()
     RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
     RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
     RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
+
+    //For clap_bestgnss debugging
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %d\n",clapB7Controller.clap_BestGnssData.sol_status);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Velocity Type: %d\n",clapB7Controller.clap_BestGnssData.vel_type);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %f\n",clapB7Controller.clap_BestGnssData.latency);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %f\n",clapB7Controller.clap_BestGnssData.age);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %lf\n",clapB7Controller.clap_BestGnssData.horizontal_speed);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %lf\n",clapB7Controller.clap_BestGnssData.track_angle);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %lf\n",clapB7Controller.clap_BestGnssData.vertical_speed);
   }
   freq_rawimu = 0;
   freq_inspvax = 0;
