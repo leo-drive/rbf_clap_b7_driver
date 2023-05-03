@@ -219,6 +219,11 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                             memcpy(&p_Controller->clapData, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_InspvaxMsgs_));
                             p_Controller->ins_parser();
                         }
+
+                        /*
+                         * p_Controller->data_resolved(p_Controller->rawData, gnss_time, msg_id)
+                         *
+                         */
                         
                     }
                     else{

@@ -113,11 +113,11 @@ ClapB7Driver::ClapB7Driver()
                                               ParameterDescriptor{})
                                 .get<std::string>()},
 
-      time_system_{this->declare_parameter(
+      time_system_{static_cast<int>(this->declare_parameter(
                            "time_system_selection",
                            ParameterValue{0},
                            ParameterDescriptor{})
-                       .get<int>()},
+                       .get<int>())},
 
       gnss_frame_{this->declare_parameter("gnss_frame",
                                           ParameterValue("gnss"),
@@ -129,16 +129,35 @@ ClapB7Driver::ClapB7Driver()
                                          ParameterDescriptor{})
                      .get<std::string>()},
 
+      autoware_orientation_frame_{this->declare_parameter("autoware_orientation_frame",
+                                                        ParameterValue("gnss"),
+                                                        ParameterDescriptor{})
+                                  .get<std::string>()},
+
       twist_frame_{this->declare_parameter("twist_frame",
                                          ParameterValue("gnss"),
                                          ParameterDescriptor{})
                      .get<std::string>()},
 
-      autoware_orientation_frame_{this->declare_parameter("autoware_orientation_frame",
-                                                          ParameterValue("gnss"),
-                                                          ParameterDescriptor{})
-                                      .get<std::string>()},
+      coordinate_system_{static_cast<int>(this->declare_parameter(
+                         "time_system_selection",
+                         ParameterValue{4},
+                         ParameterDescriptor{})
+                     .get<int>())},
 
+      local_origin_latitude{static_cast<double>(this->declare_parameter("local_origin_latitude",
+                                                       ParameterValue(40.81187906),
+                                                       ParameterDescriptor{})
+                                      .get<double>())},
+
+      local_origin_longitude{static_cast<double>(this->declare_parameter("local_origin_longitude",
+                                                                    ParameterValue(29.35810110),
+                                                                    ParameterDescriptor{})
+                                              .get<double>())},
+      local_origin_altitude{static_cast<double>(this->declare_parameter("local_origin_altitude",
+                                                                     ParameterValue(47.62),
+                                                                     ParameterDescriptor{})
+                                               .get<double>())},
       // Publisher
       pub_clap_imu_{create_publisher<rbf_clap_b7_msgs::msg::ImuData>(
           clap_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -164,7 +183,7 @@ ClapB7Driver::ClapB7Driver()
       // Timer
       timer_{this->create_wall_timer(
           1000ms, std::bind(&ClapB7Driver::timer_callback, this))},
-      
+
       tf_broadcaster_odom_{nullptr}
 
 {
@@ -183,7 +202,7 @@ ClapB7Driver::ClapB7Driver()
         
   }
 
-  if(serial_boost.isOpen() == false){
+  if( serial_boost.isOpen() == false){
     RCLCPP_INFO(
         rclcpp::get_logger("rclcpp"), 
         "\033[1;31m ClapB7 Serial port %s could not be opened, plug and relaunch the package\033[0m\n",serial_name_.c_str());
@@ -222,7 +241,7 @@ void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "NTRIP MountPoint: %s",mount_point_.c_str());
   RCLCPP_INFO(this->get_logger(), "NTRIP Port: %d",ntrip_port_);
   RCLCPP_INFO(this->get_logger(), "Activate NTRIP: %s",activate_ntrip_.c_str());
-  RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s",clap_data_topic_.c_str());
+  RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s",clap_imu_topic_.c_str());
   RCLCPP_INFO(this->get_logger(), "Clap INS Data Topic: %s",clap_ins_topic_.c_str());
   RCLCPP_INFO(this->get_logger(), "IMU Topic: %s",imu_topic_.c_str());
   RCLCPP_INFO(this->get_logger(), "NavSatFix Topic: %s",nav_sat_fix_topic_.c_str());
@@ -235,7 +254,7 @@ void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s",autoware_orientation_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Twist Frame: %s",twist_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Debug: %s",debug_.c_str());
-  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------",debug_.c_str());
+  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------");
 }
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
@@ -496,9 +515,8 @@ bool ClapB7Driver::NTRIP_client_start()
 
                              serial_boost.write(buffer, size);
 
-                             t_size += size;
                              if(debug_ == "true"){
-                              RCLCPP_INFO(this->get_logger(), "NTRIP Data size: %d",t_size);
+                              RCLCPP_INFO(this->get_logger(), "NTRIP Data size: %d",size);
                               RCLCPP_INFO(this->get_logger(), "NTRIP Status: %d",ntripClient.service_is_running());
                              }
 
@@ -627,28 +645,25 @@ void ClapB7Driver::publish_odom(){
   double utm_northing, utm_easting;
   std::string utm_zone;
   geometry_msgs::msg::TransformStamped transform;
+  sensor_msgs::msg::NavSatFix nav_sat_fix_msg;
 
+  sensor_msgs::msg::NavSatFix nav_sat_fix_origin;
 
-  //Lat-Lon to UTM calculation
-  if (m_utm0_.zone == 0)
-  {
-    initUTM(clapB7Controller.clapData.latitude, clapB7Controller.clapData.longitude, clapB7Controller.clapData.height);
-  }
+  GNSSStat gnss_stat;
 
-  LLtoUTM(clapB7Controller.clapData.latitude, clapB7Controller.clapData.longitude, m_utm0_.zone, utm_easting, utm_northing);
+  nav_sat_fix_origin.longitude =  local_origin_longitude;
+  nav_sat_fix_origin.latitude = local_origin_latitude;
+  nav_sat_fix_origin.altitude = local_origin_altitude;
 
-  // Compute convergence angle.
-  double longitudeRad      = deg2rad(clapB7Controller.clapData.longitude);
-  double latitudeRad       = deg2rad(clapB7Controller.clapData.latitude);
-  double central_meridian  = deg2rad(computeMeridian(m_utm0_.zone));
-  double convergence_angle = atan(tan(longitudeRad - central_meridian) * sin(latitudeRad));
+  nav_sat_fix_msg.longitude =  clapB7Controller.clapData.longitude;
+  nav_sat_fix_msg.latitude = clapB7Controller.clapData.latitude;
+  nav_sat_fix_msg.altitude = clapB7Controller.clapData.height;
 
-  // Convert position standard deviations to UTM frame.
-  double std_east  = clapB7Controller.clap_ArgicData.Baseline_EStd;
-  double std_north = clapB7Controller.clap_ArgicData.Baseline_NStd;
-  double std_x = std_north * cos(convergence_angle) - std_east * sin(convergence_angle);
-  double std_y = std_north * sin(convergence_angle) + std_east * cos(convergence_angle);
-  double std_z = clapB7Controller.clap_ArgicData.Xigema_alt;
+  gnss_stat = NavSatFix2LocalCartesianUTM(nav_sat_fix_msg,nav_sat_fix_origin);
+
+  RCLCPP_INFO(this->get_logger(), "GNSS Status x: %f", gnss_stat.x);
+  RCLCPP_INFO(this->get_logger(), "GNSS Status y: %f", gnss_stat.y);
+  RCLCPP_INFO(this->get_logger(), "GNSS Status z: %f", gnss_stat.z);
 
   // Fill in the message.
   msg_odom.header.stamp.set__sec(time_sec);
@@ -657,14 +672,13 @@ void ClapB7Driver::publish_odom(){
   msg_odom.header.set__frame_id("odom");
   msg_odom.set__child_frame_id(static_cast<std::string>(gnss_frame_));
 
+  msg_odom.pose.pose.position.x = gnss_stat.x;
+  msg_odom.pose.pose.position.y = gnss_stat.y;
+  msg_odom.pose.pose.position.z = gnss_stat.z;
 
-  msg_odom.pose.pose.position.x = utm_easting-m_utm0_.easting;
-  msg_odom.pose.pose.position.y = utm_northing-m_utm0_.northing;
-  msg_odom.pose.pose.position.z = clapB7Controller.clapData.height-m_utm0_.altitude;
-
-  msg_odom.pose.covariance[0*6 + 0] = std_x * std_x;
-  msg_odom.pose.covariance[1*6 + 1] = std_y * std_y;
-  msg_odom.pose.covariance[2*6 + 2] = std_z * std_z;
+  // msg_odom.pose.covariance[0*6 + 0] = std_x * std_x;
+  // msg_odom.pose.covariance[1*6 + 1] = std_y * std_y;
+  // msg_odom.pose.covariance[2*6 + 2] = std_z * std_z;
   msg_odom.pose.covariance[3*6 + 3] = clapB7Controller.clapData.std_dev_roll * clapB7Controller.clapData.std_dev_roll;
   msg_odom.pose.covariance[4*6 + 4] = clapB7Controller.clapData.std_dev_pitch * clapB7Controller.clapData.std_dev_pitch;
   msg_odom.pose.covariance[5*6 + 5] = clapB7Controller.clapData.std_dev_azimuth * clapB7Controller.clapData.std_dev_azimuth;
@@ -689,120 +703,8 @@ void ClapB7Driver::publish_odom(){
 
 }
 
-double ClapB7Driver::computeMeridian(int zone_number){
-
-  double meridian = 0.0;
-  if(zone_number > 0){
-    meridian = (zone_number - 1) * 6 - 180 + 3;
-  }
-  return meridian;
-
-}
-
-void ClapB7Driver::initUTM(double Lat, double Long, double altitude){
-
-  int zoneNumber;
-
-  // Make sure the longitude is between -180.00 .. 179.9
-  double LongTemp = (Long+180)-int((Long+180)/360)*360-180;
-
-  zoneNumber = int((LongTemp + 180)/6) + 1;
-
-  if( Lat >= 56.0 && Lat < 64.0 && LongTemp >= 3.0 && LongTemp < 12.0 )
-  {
-    zoneNumber = 32;
-  }
-
-  // Special zones for Svalbard
-  if( Lat >= 72.0 && Lat < 84.0 )
-  {
-    if(      LongTemp >= 0.0  && LongTemp <  9.0 ) zoneNumber = 31;
-    else if( LongTemp >= 9.0  && LongTemp < 21.0 ) zoneNumber = 33;
-    else if( LongTemp >= 21.0 && LongTemp < 33.0 ) zoneNumber = 35;
-    else if( LongTemp >= 33.0 && LongTemp < 42.0 ) zoneNumber = 37;
-  }
-
-  m_utm0_.zone = zoneNumber;
-  m_utm0_.altitude = altitude;
-  LLtoUTM(Lat, Long, m_utm0_.zone, m_utm0_.northing, m_utm0_.easting);
-
-  RCLCPP_INFO(rclcpp::get_logger("rclcpp"),"initialized from lat:%f long:%f UTM zone %d%c: easting:%fm (%dkm) northing:%fm (%dkm)"
-  , Lat, Long, m_utm0_.zone, UTMLetterDesignator(Lat)
-  , m_utm0_.easting, (int)(m_utm0_.easting)/1000
-  , m_utm0_.northing, (int)(m_utm0_.northing)/1000);
-
-}
-
-/*
- * Modification of gps_common::LLtoUTM() to use a constant UTM zone.
- *
- * Convert lat/long to UTM coords.  Equations from USGS Bulletin 1532
- *
- * East Longitudes are positive, West longitudes are negative.
- * North latitudes are positive, South latitudes are negative
- * Lat and Long are in fractional degrees
- *
- * Originally written by Chuck Gantz- chuck.gantz@globalstar.com.
- */
-void ClapB7Driver::LLtoUTM(double Lat, double Long, int zoneNumber, 
-                            double &UTMNorthing, double &UTMEasting){
-
-const double RADIANS_PER_DEGREE = M_PI/180.0;
-
-  // WGS84 Parameters
-  const double WGS84_A = 6378137.0;        // major axis
-  const double WGS84_E = 0.0818191908;     // first eccentricity
-
-  // UTM Parameters
-  const double UTM_K0 = 0.9996;            // scale factor
-  const double UTM_E2 = (WGS84_E*WGS84_E); // e^2
-
-  double a = WGS84_A;
-  double eccSquared = UTM_E2;
-  double k0 = UTM_K0;
-
-  double LongOrigin;
-  double eccPrimeSquared;
-  double N, T, C, A, M;
-
-  // Make sure the longitude is between -180.00 .. 179.9
-  double LongTemp = (Long+180)-int((Long+180)/360)*360-180;
-
-  double LatRad = Lat*RADIANS_PER_DEGREE;
-  double LongRad = LongTemp*RADIANS_PER_DEGREE;
-  double LongOriginRad;
-
-  // +3 puts origin in middle of zone
-  LongOrigin = (zoneNumber - 1)*6 - 180 + 3;
-  LongOriginRad = LongOrigin * RADIANS_PER_DEGREE;
-
-  eccPrimeSquared = (eccSquared)/(1-eccSquared);
-
-  N = a/sqrt(1-eccSquared*sin(LatRad)*sin(LatRad));
-  T = tan(LatRad)*tan(LatRad);
-  C = eccPrimeSquared*cos(LatRad)*cos(LatRad);
-  A = cos(LatRad)*(LongRad-LongOriginRad);
-
-  M = a*((1 - eccSquared/4      - 3*eccSquared*eccSquared/64     - 5*eccSquared*eccSquared*eccSquared/256)*LatRad
-            - (3*eccSquared/8   + 3*eccSquared*eccSquared/32    + 45*eccSquared*eccSquared*eccSquared/1024)*sin(2*LatRad)
-                                + (15*eccSquared*eccSquared/256 + 45*eccSquared*eccSquared*eccSquared/1024)*sin(4*LatRad)
-                                - (35*eccSquared*eccSquared*eccSquared/3072)*sin(6*LatRad));
-
-  UTMEasting = (double)(k0*N*(A+(1-T+C)*A*A*A/6
-    + (5-18*T+T*T+72*C-58*eccPrimeSquared)*A*A*A*A*A/120)
-    + 500000.0);
-
-  UTMNorthing = (double)(k0*(M+N*tan(LatRad)*(A*A/2+(5-T+9*C+4*C*C)*A*A*A*A/24
-    + (61-58*T+T*T+600*C-330*eccPrimeSquared)*A*A*A*A*A*A/720)));
-
-  if(Lat < 0)
-  {
-    UTMNorthing += 10000000.0; //10000000 meter offset for southern hemisphere
-  }
-}
-
 void ClapB7Driver::publish_transform(
-  const std::string &ref_parent_frame_id, 
+  const std::string &ref_parent_frame_id,
   const std::string &ref_child_frame_id,
   const geometry_msgs::msg::Pose &ref_pose, 
   geometry_msgs::msg::TransformStamped &ref_transform){
@@ -827,31 +729,46 @@ void ClapB7Driver::publish_transform(
 
 
 }
-char ClapB7Driver::UTMLetterDesignator(double Lat)
+ClapB7Driver::GNSSStat ClapB7Driver::NavSatFix2LocalCartesianUTM(
+  const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg,
+  sensor_msgs::msg::NavSatFix nav_sat_fix_origin)
 {
-	char LetterDesignator;
+  GNSSStat utm_local;
+  utm_local.coordinate_system = CoordinateSystem::UTM;
 
-	if     ((84 >= Lat) && (Lat >= 72))  LetterDesignator = 'X';
-	else if ((72 > Lat) && (Lat >= 64))  LetterDesignator = 'W';
-	else if ((64 > Lat) && (Lat >= 56))  LetterDesignator = 'V';
-	else if ((56 > Lat) && (Lat >= 48))  LetterDesignator = 'U';
-	else if ((48 > Lat) && (Lat >= 40))  LetterDesignator = 'T';
-	else if ((40 > Lat) && (Lat >= 32))  LetterDesignator = 'S';
-	else if ((32 > Lat) && (Lat >= 24))  LetterDesignator = 'R';
-	else if ((24 > Lat) && (Lat >= 16))  LetterDesignator = 'Q';
-	else if ((16 > Lat) && (Lat >= 8))   LetterDesignator = 'P';
-	else if (( 8 > Lat) && (Lat >= 0))   LetterDesignator = 'N';
-	else if (( 0 > Lat) && (Lat >= -8))  LetterDesignator = 'M';
-	else if ((-8 > Lat) && (Lat >= -16)) LetterDesignator = 'L';
-	else if((-16 > Lat) && (Lat >= -24)) LetterDesignator = 'K';
-	else if((-24 > Lat) && (Lat >= -32)) LetterDesignator = 'J';
-	else if((-32 > Lat) && (Lat >= -40)) LetterDesignator = 'H';
-	else if((-40 > Lat) && (Lat >= -48)) LetterDesignator = 'G';
-	else if((-48 > Lat) && (Lat >= -56)) LetterDesignator = 'F';
-	else if((-56 > Lat) && (Lat >= -64)) LetterDesignator = 'E';
-	else if((-64 > Lat) && (Lat >= -72)) LetterDesignator = 'D';
-	else if((-72 > Lat) && (Lat >= -80)) LetterDesignator = 'C';
-    // 'Z' is an error flag, the Latitude is outside the UTM limits
-	else LetterDesignator = 'Z';
-	return LetterDesignator;
+  // origin of the local coordinate system in global frame
+  GNSSStat utm_origin;
+  utm_origin.coordinate_system = CoordinateSystem::UTM;
+  GeographicLib::UTMUPS::Forward(
+    nav_sat_fix_origin.latitude, nav_sat_fix_origin.longitude, utm_origin.zone,
+    utm_origin.east_north_up, utm_origin.x, utm_origin.y);
+  utm_origin.z = EllipsoidHeight2OrthometricHeight(nav_sat_fix_origin);
+  // individual coordinates of global coordinate system
+  double global_x = 0.0;
+  double global_y = 0.0;
+  GeographicLib::UTMUPS::Forward(
+    nav_sat_fix_msg.latitude, nav_sat_fix_msg.longitude, utm_origin.zone,
+    utm_origin.east_north_up, global_x, global_y);
+  utm_local.latitude = nav_sat_fix_msg.latitude;
+  utm_local.longitude = nav_sat_fix_msg.longitude;
+  utm_local.altitude = nav_sat_fix_msg.altitude;
+  // individual coordinates of local coordinate system
+  utm_local.x = global_x - utm_origin.x;
+  utm_local.y = global_y - utm_origin.y;
+  utm_local.z = EllipsoidHeight2OrthometricHeight(nav_sat_fix_msg) - utm_origin.z;
+
+  return utm_local;
+}
+
+
+double ClapB7Driver::EllipsoidHeight2OrthometricHeight(const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg)
+{
+  double OrthometricHeight{0.0};
+
+  GeographicLib::Geoid egm2008("egm2008-1");
+  OrthometricHeight = egm2008.ConvertHeight(
+    nav_sat_fix_msg.latitude, nav_sat_fix_msg.longitude, nav_sat_fix_msg.altitude,
+    GeographicLib::Geoid::ELLIPSOIDTOGEOID);
+
+  return OrthometricHeight;
 }
