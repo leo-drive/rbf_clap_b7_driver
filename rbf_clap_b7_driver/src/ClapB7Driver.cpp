@@ -538,13 +538,25 @@ void ClapB7Driver::publish_twist(){
   double total_speed_linear= 0;
   double t_angular_speed_z= 0;
 
+  /* BestGnss Vel calculation
+   *
+   * total_speed_linear = clapB7Controller.clap_BestGnssData.horizontal_speed
+   *
+  */
+
   if(ins_active_ == 0){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clap_ArgicData.Velocity_E,2)+std::pow(clapB7Controller.clap_ArgicData.Velocity_N,2));
   }
   else if(ins_active_ == 1){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clapData.east_velocity,2)+std::pow(clapB7Controller.clapData.north_velocity,2));
   }
-  msg_twist.twist.twist.linear.x = total_speed_linear;
+
+  if(cos(deg2rad(clapB7Controller.clapData.azimuth - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
+    msg_twist.twist.twist.linear.x = -total_speed_linear;
+  }
+  else{
+    msg_twist.twist.twist.linear.x = total_speed_linear;
+  }
 
   t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
 
