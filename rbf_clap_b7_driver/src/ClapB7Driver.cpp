@@ -14,6 +14,7 @@ using rclcpp::ParameterValue;
 int freq_rawimu = 0;
 int freq_inspvax = 0;
 int freq_agric = 0;
+int freq_bestgnss = 0;
 
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
@@ -268,6 +269,7 @@ void ClapB7Driver::timer_callback()
     RCLCPP_WARN(this->get_logger(), "freq_rawimu_hz = %d\n", freq_rawimu);
     RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
     RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
+    RCLCPP_WARN(this->get_logger(),"freq_bestgnss_hz = %d\n", freq_bestgnss);
 
     //For clap_bestgnss debugging
     RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %d\n",clapB7Controller.clap_BestGnssData.sol_status);
@@ -281,6 +283,7 @@ void ClapB7Driver::timer_callback()
   freq_rawimu = 0;
   freq_inspvax = 0;
   freq_agric = 0;
+  freq_bestgnss = 0;
 }
 double ClapB7Driver::deg2rad(double degree){
   return (degree * (M_PI / 180));

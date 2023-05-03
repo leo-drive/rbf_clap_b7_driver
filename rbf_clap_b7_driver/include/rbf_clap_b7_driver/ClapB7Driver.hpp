@@ -67,6 +67,7 @@
 extern int freq_rawimu;
 extern int freq_inspvax;
 extern int freq_agric;
+extern int freq_bestgnss;
 
 
 
