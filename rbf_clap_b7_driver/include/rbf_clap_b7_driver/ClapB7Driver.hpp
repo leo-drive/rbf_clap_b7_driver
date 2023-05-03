@@ -52,7 +52,7 @@
 
 #define ACCEL_SCALE_FACTOR (400 / (pow(2, 31)))
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
-#define HZ_TO_SECOND ( 100 )
+#define HZ_TO_SECOND ( 50 )
 
 // ROS Time to GPS time Parameters
 #define k_TO_NANO (1e9)
