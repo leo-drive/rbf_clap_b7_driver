@@ -33,6 +33,12 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
 
+
+#include <GeographicLib/Geoid.hpp>
+#include <GeographicLib/LocalCartesian.hpp>
+#include <GeographicLib/MGRS.hpp>
+#include <GeographicLib/UTMUPS.hpp>
+
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
 
@@ -43,14 +49,16 @@
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
 
+
 #define ACCEL_SCALE_FACTOR (400 / (pow(2, 31)))
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
-#define HZ_TO_SECOND ( 100 )
+#define HZ_TO_SECOND ( 50 )
 
 // ROS Time to GPS time Parameters
 #define k_TO_NANO (1e9)
 #define k_GPS_SEC_IN_WEEK (60 * 60 * 24 * 7)
-#define k_UNIX_OFFSET (315964782000000000)
+#define k_UNIX_OFFSET (315964802000000000)
+//315964782000000000
 #define k_MILI_TO_NANO (1e6)
 
 #define INS_INACTIVE    0
@@ -59,6 +67,7 @@
 extern int freq_rawimu;
 extern int freq_inspvax;
 extern int freq_agric;
+
 
 
 class ClapB7Driver : public rclcpp::Node
@@ -73,15 +82,41 @@ public:
     void serial_receive_callback(const char *data, unsigned int len);
 
 private:
-
-    typedef struct _UTM0
+    enum class CoordinateSystem {
+      UTM = 0,
+      MGRS = 1,
+      PLANE = 2,
+      LOCAL_CARTESIAN_WGS84 = 3,
+      LOCAL_CARTESIAN_UTM = 4
+    };
+    struct GNSSStat
     {
-        double			easting;
-        double			northing;
-        double			altitude;
-        int				zone;
-    } UTM0;
-    
+        GNSSStat()
+        : coordinate_system(CoordinateSystem::MGRS),
+          east_north_up(true),
+          zone(0),
+          mgrs_zone(""),
+          x(0),
+          y(0),
+          z(0),
+          latitude(0),
+          longitude(0),
+          altitude(0)
+        {
+        }
+
+        CoordinateSystem coordinate_system;
+        bool east_north_up;
+        int zone;
+        std::string mgrs_zone;
+        double x;
+        double y;
+        double z;
+        double latitude;
+        double longitude;
+        double altitude;
+    };
+
     void timer_callback();
     void pub_imu_data();
     void pub_ins_data();
@@ -101,16 +136,18 @@ private:
     double deg2rad(double degree);
     void read_parameters();
 
-    void LLtoUTM(double Lat, double Long, int zoneNumber, double &UTMNorthing, double &UTMEasting);
-    double computeMeridian(int zone_number);
-    void initUTM(double Lat, double Long, double altitude);
+    //NavSatFix to UTM transform functions
+    double EllipsoidHeight2OrthometricHeight(
+      const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg);
 
-    char UTMLetterDesignator(double Lat);
+    GNSSStat NavSatFix2LocalCartesianUTM(
+      const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg,
+      sensor_msgs::msg::NavSatFix nav_sat_fix_origin);
 
     void transform_enu_to_ned(double &x, double &y, double &z);
 
     //Topics
-    std::string clap_data_topic_;
+
     std::string clap_imu_topic_;
     std::string clap_ins_topic_;
     std::string imu_topic_;
@@ -137,7 +174,10 @@ private:
 
     bool ins_active_;
 
-    UTM0 m_utm0_;    
+    int coordinate_system_;
+    double local_origin_latitude;
+    double local_origin_longitude;
+    double local_origin_altitude;
 
     std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_odom_;
 
@@ -166,6 +206,9 @@ private:
     const float g_ = 9.81f;
 
     std::once_flag flag_ins_active;
+
+
+
 
     rclcpp::TimerBase::SharedPtr timer_;
 };

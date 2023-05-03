@@ -8,6 +8,7 @@ endif()
 include_directories(include/rbf_clap_b7_driver)
 include_directories(rbf_clap_b7_msgs)
 
+find_package(ament_cmake_auto REQUIRED)
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
@@ -22,6 +23,18 @@ find_package(autoware_sensing_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+
+## Find non-ROS library
+find_package(PkgConfig)
+find_path(GeographicLib_INCLUDE_DIR GeographicLib/Config.h
+  PATH_SUFFIXES GeographicLib
+)
+
+set(GeographicLib_INCLUDE_DIRS ${GeographicLib_INCLUDE_DIR})
+find_library(GeographicLib_LIBRARIES
+  NAMES Geographic
+)
+
 
 set(CLAP_B7_DRIVER_LIB_SRC
         src/TermiosSerial.cpp
@@ -53,7 +66,13 @@ add_executable(rbf_clap_b7_driver_exe
         ${CLAP_B7_DRIVER_LIB_SRC}
         ${CLAP_B7_DRIVER_LIB_HEADER}
         ${NTRIP_LIB_SRC}
-        ${NTRIP_LIB_HEADER})
+        ${NTRIP_LIB_HEADER}
+        ${GeographicLib_LIBRARIES}
+        )
+
+target_link_libraries(rbf_clap_b7_driver_exe
+        ${GeographicLib_LIBRARIES}
+        )
 
 ament_target_dependencies(rbf_clap_b7_driver_exe
         rclcpp
@@ -68,6 +87,7 @@ ament_target_dependencies(rbf_clap_b7_driver_exe
         tf2_msgs
         tf2_geometry_msgs
         )
+
 
 install(TARGETS
         rbf_clap_b7_driver_exe

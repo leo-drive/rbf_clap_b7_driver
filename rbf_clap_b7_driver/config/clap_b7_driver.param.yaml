@@ -9,6 +9,7 @@
     ntrip_password: "GzMSQg"
     ntrip_mount_point: "VRSRTCM31"
     ntrip_port: 2101
+
     # Topics
     clap_imu_data: "clap/clap_msgs/clap_imu"
     clap_ins_data: "clap/clap_msgs/clap_ins"
@@ -17,6 +18,7 @@
     autoware_orientation_topic: "clap/autoware_orientation"
     twist_topic: "clap/ros/twist_with_covariance_stamped"
     odom_topic: "clap/ros/odom"
+    
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     
@@ -30,5 +32,23 @@
     imu_frame: "GNSS_INS/gnss_ins_link"
     autoware_orientation_frame: "GNSS_INS/gnss_ins_link"
     twist_frame: "GNSS_INS/gnss_ins_link"
+
+    ### Coordinate System Parameter
+    #UTM = 0,
+    #MGRS = 1,
+    #PLANE = 2,
+    #LOCAL_CARTESIAN_WGS84 = 3,
+    #LOCAL_CARTESIAN_UTM = 4
+    coordinate_system: 4
+    # Latitude of local origin
+    local_origin_latitude: 40.81187906
+    # Longitude of local origin
+    local_origin_longitude: 29.35810110
+    # Altitude of local origin
+    local_origin_altitude: 47.62
+
+  #nav_sat_fix_origin.longitude =  29.360491808334285;
+  #nav_sat_fix_origin.latitude = 40.816617984672746;
+  #nav_sat_fix_origin.altitude = 110.00;
 
     debug: "true"
