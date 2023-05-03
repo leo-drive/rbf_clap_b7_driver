@@ -144,7 +144,7 @@ private:
       const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg,
       sensor_msgs::msg::NavSatFix nav_sat_fix_origin);
 
-    void transform_enu_to_ned(double &x, double &y, double &z);
+    void transform_enu_to_ned(tf2::Quaternion &q_in);
 
     //Topics
 

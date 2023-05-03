@@ -140,22 +140,22 @@ ClapB7Driver::ClapB7Driver()
                      .get<std::string>()},
 
       coordinate_system_{static_cast<int>(this->declare_parameter(
-                         "time_system_selection",
+                         "coordinate_system",
                          ParameterValue{4},
                          ParameterDescriptor{})
                      .get<int>())},
 
       local_origin_latitude{static_cast<double>(this->declare_parameter("local_origin_latitude",
-                                                       ParameterValue(40.81187906),
+                                                       ParameterValue(41.018738),
                                                        ParameterDescriptor{})
                                       .get<double>())},
 
       local_origin_longitude{static_cast<double>(this->declare_parameter("local_origin_longitude",
-                                                                    ParameterValue(29.35810110),
+                                                                    ParameterValue(28.88742),
                                                                     ParameterDescriptor{})
                                               .get<double>())},
       local_origin_altitude{static_cast<double>(this->declare_parameter("local_origin_altitude",
-                                                                     ParameterValue(47.62),
+                                                                     ParameterValue(117.00),
                                                                      ParameterDescriptor{})
                                                .get<double>())},
       // Publisher
@@ -272,11 +272,11 @@ void ClapB7Driver::timer_callback()
     //For clap_bestgnss debugging
     RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %d\n",clapB7Controller.clap_BestGnssData.sol_status);
     RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Velocity Type: %d\n",clapB7Controller.clap_BestGnssData.vel_type);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %f\n",clapB7Controller.clap_BestGnssData.latency);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %f\n",clapB7Controller.clap_BestGnssData.age);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %lf\n",clapB7Controller.clap_BestGnssData.horizontal_speed);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %lf\n",clapB7Controller.clap_BestGnssData.track_angle);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %lf\n",clapB7Controller.clap_BestGnssData.vertical_speed);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Latency: %f\n",clapB7Controller.clap_BestGnssData.latency);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Age: %f\n",clapB7Controller.clap_BestGnssData.age);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Horizontal speed: %lf\n",clapB7Controller.clap_BestGnssData.horizontal_speed);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Track angle: %lf\n",clapB7Controller.clap_BestGnssData.track_angle);
+    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Vertical speed: %lf\n",clapB7Controller.clap_BestGnssData.vertical_speed);
   }
   freq_rawimu = 0;
   freq_inspvax = 0;
@@ -443,42 +443,24 @@ void ClapB7Driver::publish_std_imu(){
 
   sensor_msgs::msg::Imu msg_imu;
   msg_imu.header.set__frame_id(static_cast<std::string>(imu_frame_));
-
   msg_imu.header.stamp.set__sec(time_sec);
   msg_imu.header.stamp.set__nanosec(time_nanosec);
 
-  tf2::Quaternion quart_orient, quart_orient_corrected;
-  tf2::Matrix3x3 ENU2NED, ins_rot_matrix, ins_rot_;
+  tf2::Quaternion quart_orient;
+
+  if(ins_active_ == 0){
+    quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Heading));
+  }
+  else if(ins_active_ == 1){
+    quart_orient.setRPY(deg2rad(clapB7Controller.clapData.roll), deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.azimuth));
+  }
 
   if(enu_ned_transform_=="true"){
-    //ENU -> NED Transformation
-    //ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
-    //ins_rot_matrix.setRotation(quart_orient);
-    //ins_rot_ = ENU2NED * ins_rot_matrix;
-    //ins_rot_.getRotation(quart_orient_corrected);
-
-
-    double t_roll,t_pitch,t_yaw;
-    tf2::Matrix3x3 m(quart_orient);
-    m.getRPY(t_roll,t_pitch,t_yaw);
-
-    double t_roll_ = t_roll*180/M_PI;
-    double t_pitch_ = t_pitch*180/M_PI;
-    double t_yaw_ = t_yaw*180/M_PI;
-
-
-    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
-
-
-    Eigen::Quaterniond p(angle_axis_x * angle_axis_y * angle_axis_z );
-
-    Eigen::Quaterniond q = p.inverse();
-    msg_imu.orientation.set__w(q.w());
-    msg_imu.orientation.set__x(q.x());
-    msg_imu.orientation.set__y(q.y());
-    msg_imu.orientation.set__z(q.z());
+    transform_enu_to_ned(quart_orient);
+    msg_imu.orientation.set__w(quart_orient.w());
+    msg_imu.orientation.set__x(quart_orient.x());
+    msg_imu.orientation.set__y(quart_orient.y());
+    msg_imu.orientation.set__z(quart_orient.z());
 
   }
   else{
@@ -583,14 +565,11 @@ void ClapB7Driver::publish_orientation()
 {
 
   autoware_sensing_msgs::msg::GnssInsOrientationStamped msg_gnss_orientation;
-  tf2::Quaternion quart_orient, quart_orient_corrected;
-  tf2::Matrix3x3 ENU2NED, ins_rot_matrix, ins_rot_,clap2ros,ins_corrected_rot_;
+  tf2::Quaternion quart_orient;
 
   msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
   msg_gnss_orientation.header.stamp.set__sec(static_cast<int32_t>(time_sec));
   msg_gnss_orientation.header.stamp.set__nanosec(static_cast<uint32_t>(time_nanosec));
-
-
 
   if(ins_active_ == 0){
     quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Heading));
@@ -600,36 +579,12 @@ void ClapB7Driver::publish_orientation()
   }
 
   if(enu_ned_transform_=="true"){
-    //ENU -> NED Transformation
-    // ENU2NED = tf2::Matrix3x3(0, 1, 0, 1, 0, 0, 0, 0, -1);
-    // //clap2ros = tf2::Matrix3x3(1, 0, 0, 0, -1, 0, 0, 0, -1);
-    // ins_rot_matrix.setRotation(quart_orient);
-    // ins_rot_ = ENU2NED * ins_rot_matrix;
-    // //ins_corrected_rot_ = ins_rot_ * clap2ros;
-    // ins_rot_.getRotation(quart_orient_corrected);
-    double t_roll,t_pitch,t_yaw;
-    tf2::Matrix3x3 m(quart_orient);
-    m.getRPY(t_roll,t_pitch,t_yaw);
 
-    double t_roll_ = t_roll*180/M_PI;
-    double t_pitch_ = t_pitch*180/M_PI;
-    double t_yaw_ = t_yaw*180/M_PI;
-
-
-    Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
-    Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
-    Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
-
-
-    Eigen::Quaterniond p(angle_axis_x * angle_axis_y * angle_axis_z );
-
-    Eigen::Quaterniond q = p.inverse();
-
-    msg_gnss_orientation.orientation.orientation.set__w(q.w());
-    msg_gnss_orientation.orientation.orientation.set__x(q.x());
-    msg_gnss_orientation.orientation.orientation.set__y(q.y());
-    msg_gnss_orientation.orientation.orientation.set__z(q.z());
-
+    transform_enu_to_ned(quart_orient);
+    msg_gnss_orientation.orientation.orientation.set__w(quart_orient.w());
+    msg_gnss_orientation.orientation.orientation.set__x(quart_orient.x());
+    msg_gnss_orientation.orientation.orientation.set__y(quart_orient.y());
+    msg_gnss_orientation.orientation.orientation.set__z(quart_orient.z());
 
   }
   else{
@@ -780,4 +735,34 @@ double ClapB7Driver::EllipsoidHeight2OrthometricHeight(const sensor_msgs::msg::N
     GeographicLib::Geoid::ELLIPSOIDTOGEOID);
 
   return OrthometricHeight;
+}
+
+
+void ClapB7Driver::transform_enu_to_ned(tf2::Quaternion &q_in){
+
+  double t_roll,t_pitch,t_yaw;
+  tf2::Matrix3x3 m(q_in);
+
+
+  m.getRPY(t_roll,t_pitch,t_yaw);
+
+  double t_roll_ = t_roll*180/M_PI;
+  double t_pitch_ = t_pitch*180/M_PI;
+  double t_yaw_ = t_yaw*180/M_PI;
+
+
+  Eigen::AngleAxisd angle_axis_x(deg2rad(t_roll_+180), Eigen::Vector3d::UnitX());
+  Eigen::AngleAxisd angle_axis_y(deg2rad(t_pitch_), Eigen::Vector3d::UnitY());
+  Eigen::AngleAxisd angle_axis_z(deg2rad(t_yaw_-90), Eigen::Vector3d::UnitZ());
+
+
+  Eigen::Quaterniond p(angle_axis_z * angle_axis_y * angle_axis_x );
+
+  Eigen::Quaterniond q = p.inverse();
+
+  q_in.setW(q.w());
+  q_in.setX(q.x());
+  q_in.setY(q.y());
+  q_in.setZ(q.z());
+
 }
