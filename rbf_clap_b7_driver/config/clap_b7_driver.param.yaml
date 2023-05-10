@@ -3,7 +3,7 @@
     serial_name: "/dev/ttyUSB0"
     parse_type: "BINARY"
     baud_rate: 460800
-    activate_ntrip: "true"
+    activate_ntrip: "true" #Runs ntrip_client_ros package
     ntrip_ip: "212.156.70.42"
     ntrip_user_name: "K0734151301"
     ntrip_password: "GzMSQg"

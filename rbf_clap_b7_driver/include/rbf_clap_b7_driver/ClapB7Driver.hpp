@@ -32,6 +32,7 @@
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <mavros_msgs/msg/rtcm.hpp>
 
 
 #include <GeographicLib/Geoid.hpp>
@@ -147,6 +148,8 @@ private:
 
     void transform_enu_to_ned(tf2::Quaternion &q_in);
 
+    void rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm);
+
     //Topics
 
     std::string clap_imu_topic_;
@@ -199,6 +202,9 @@ private:
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
     rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr pub_twist_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
+
+    //RTK Subscriber
+    rclcpp::Subscription<mavros_msgs::msg::RTCM>::SharedPtr sub_rtcm_;
 
     ClapB7Controller clapB7Controller;
     uint8_t ntrip_status_ = 0;
