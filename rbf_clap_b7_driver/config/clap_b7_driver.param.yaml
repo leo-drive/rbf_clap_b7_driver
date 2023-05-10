@@ -18,7 +18,10 @@
     autoware_orientation_topic: "clap/autoware_orientation"
     twist_topic: "clap/ros/twist_with_covariance_stamped"
     odom_topic: "clap/ros/odom"
-    
+
+    #Subscribe to mavros_msgs/RTCM topic
+    rtcm_topic: "ntrip/rtcm"
+
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     

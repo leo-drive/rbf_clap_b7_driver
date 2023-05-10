@@ -62,6 +62,11 @@ ClapB7Driver::ClapB7Driver()
                             ParameterDescriptor{})
         .get<std::string>()},
 
+      rtcm_topic_{this->declare_parameter("rtcm_topic",
+                                      ParameterValue("ntrip/rtcm"),
+                                      ParameterDescriptor{})
+                                      .get<std::string>()},
+
       // Serial port config
       serial_name_{this->declare_parameter(
                            "serial_name",
@@ -182,7 +187,7 @@ ClapB7Driver::ClapB7Driver()
           odom_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       sub_rtcm_{create_subscription<mavros_msgs::msg::RTCM>(
-            "/ntrip/rtcm",rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
+                  rtcm_topic_,rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
       // Timer
       timer_{this->create_wall_timer(
           1000ms, std::bind(&ClapB7Driver::timer_callback, this))},
@@ -787,12 +792,12 @@ void ClapB7Driver::transform_enu_to_ned(tf2::Quaternion &q_in){
 }
 void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm) {
   //RCLCPP_INFO(this->get_logger(),"Received Data: %d",msg_rtcm->data.data());
-  const char *buffer[msg_rtcm->data.size()];
-  RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
+  char buffer[msg_rtcm->data.size()];
+  //RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
 
   for(int i = 0;i<msg_rtcm->data.size();i++){
-    buffer[i] = reinterpret_cast<const char*>(msg_rtcm->data.at(i));
+    buffer[i] = msg_rtcm->data.at(i);
   }
 
-  serial_boost.write(reinterpret_cast<const char *>(buffer), sizeof(buffer));
+  serial_boost.write(buffer, sizeof(buffer));
 }
