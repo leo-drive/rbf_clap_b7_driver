@@ -19,6 +19,8 @@
     twist_topic: "clap/ros/twist_with_covariance_stamped"
     odom_topic: "clap/ros/odom"
 
+    #Package name of NTRIP Client ROS
+    ntrip_client_package_name: "ntrip_client_ros"
     #Subscribe to mavros_msgs/RTCM topic
     rtcm_topic: "ntrip/rtcm"
 

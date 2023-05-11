@@ -27,12 +27,14 @@ def generate_launch_description():
     with open(param,'r') as f:
         parameters = yaml.safe_load(f)
 
+    ntrip_client_pack = parameters["/**"]["ros__parameters"]["ntrip_client_package_name"]
+
     if(parameters["/**"]["ros__parameters"]["activate_ntrip"]=="true"):
         try:
             ntrip_client_ros_launch = IncludeLaunchDescription(
                 PythonLaunchDescriptionSource(
                     os.path.join(
-                        get_package_share_directory("ntrip_client_ros"),
+                        get_package_share_directory(ntrip_client_pack),
                        "launch/ntrip_client_ros.launch.py"
                     )
                 )
