@@ -563,11 +563,16 @@ void ClapB7Driver::publish_twist(){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clapData.east_velocity,2)+std::pow(clapB7Controller.clapData.north_velocity,2));
   }
 
+  //Calculation of median of speed
+  speed_buffer_.push_front(total_speed_linear);
+  
+  auto median_speed = getMedianPosition(speed_buffer_);
+
   if(cos(deg2rad(clapB7Controller.clapData.azimuth - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
-    msg_twist.twist.twist.linear.x = -total_speed_linear;
+    msg_twist.twist.twist.linear.x = -median_speed;
   }
   else{
-    msg_twist.twist.twist.linear.x = total_speed_linear;
+    msg_twist.twist.twist.linear.x = median_speed;
   }
 
   t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
@@ -800,4 +805,28 @@ void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg
   }
 
   serial_boost.write(buffer, sizeof(buffer));
+}
+
+double ClapB7Driver::getMedianPosition(
+  const boost::circular_buffer<double> & speed_buffer)
+{
+  auto getMedian = [](std::vector<double> array) {
+    std::sort(std::begin(array), std::end(array));
+    const size_t median_index = array.size() / 2;
+    double median = (array.size() % 2)
+                      ? (array.at(median_index))
+                      : ((array.at(median_index) + array.at(median_index - 1)) / 2);
+    return median;
+  };
+
+  std::vector<double> array_speed;
+
+  for (const auto & speed : speed_buffer) {
+    array_speed.push_back(speed);
+  }
+
+  double median_point;
+  median_point = getMedian(array_speed);
+
+  return median_point;
 }

@@ -9,7 +9,7 @@
 #include <string>
 #include <sstream>
 #include <cstring>
-
+#include <boost/circular_buffer.hpp>
 
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
@@ -151,6 +151,8 @@ private:
 
     void rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm);
 
+    double getMedianPosition(
+      const boost::circular_buffer<double> & speed_buffer);
     //Topics
 
     std::string clap_imu_topic_;
@@ -216,7 +218,7 @@ private:
 
     std::once_flag flag_ins_active;
 
-
+    boost::circular_buffer<double> speed_buffer_;
 
 
     rclcpp::TimerBase::SharedPtr timer_;
