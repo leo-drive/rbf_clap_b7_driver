@@ -10,6 +10,7 @@
 #include <sstream>
 #include <cstring>
 
+
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -121,6 +122,7 @@ private:
     std::string autoware_orientation_topic_;
     std::string twist_topic_;
     std::string odom_topic_;
+    std::string rtcm_topic_;
 
     //NTRIP Parameters
     std::string serial_name_;
