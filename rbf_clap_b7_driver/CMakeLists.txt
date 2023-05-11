@@ -22,6 +22,7 @@ find_package(autoware_sensing_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(mavros_msgs REQUIRED)
 
 set(CLAP_B7_DRIVER_LIB_SRC
         src/TermiosSerial.cpp
@@ -67,6 +68,7 @@ ament_target_dependencies(rbf_clap_b7_driver_exe
         tf2_ros
         tf2_msgs
         tf2_geometry_msgs
+        mavros_msgs
         )
 
 install(TARGETS

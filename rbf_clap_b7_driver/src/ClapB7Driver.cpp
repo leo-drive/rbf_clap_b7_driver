@@ -161,6 +161,8 @@ ClapB7Driver::ClapB7Driver()
       pub_odom_{create_publisher<nav_msgs::msg::Odometry>(
           odom_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
+      sub_rtcm_{create_subscription<mavros_msgs::msg::RTCM>(
+            "/ntrip/rtcm",rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
       // Timer
       timer_{this->create_wall_timer(
           1000ms, std::bind(&ClapB7Driver::timer_callback, this))},
@@ -200,7 +202,7 @@ ClapB7Driver::ClapB7Driver()
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
 
   if (activate_ntrip_ == "true") {
-    
+    /*
     if(NTRIP_client_start()){
       RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client connected \033[0m");
     }
@@ -208,6 +210,7 @@ ClapB7Driver::ClapB7Driver()
       RCLCPP_INFO(this->get_logger(), "\033[1;31m NTRIP client cannot connected \033[0m");
 
     }
+    */
   }
 
   RCLCPP_INFO(this->get_logger(), "ClabB7 Driver Initiliazed");
@@ -830,7 +833,6 @@ void ClapB7Driver::publish_transform(
 char ClapB7Driver::UTMLetterDesignator(double Lat)
 {
 	char LetterDesignator;
-
 	if     ((84 >= Lat) && (Lat >= 72))  LetterDesignator = 'X';
 	else if ((72 > Lat) && (Lat >= 64))  LetterDesignator = 'W';
 	else if ((64 > Lat) && (Lat >= 56))  LetterDesignator = 'V';
@@ -854,4 +856,16 @@ char ClapB7Driver::UTMLetterDesignator(double Lat)
     // 'Z' is an error flag, the Latitude is outside the UTM limits
 	else LetterDesignator = 'Z';
 	return LetterDesignator;
+}
+
+void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm) {
+  //RCLCPP_INFO(this->get_logger(),"Received Data: %d",msg_rtcm->data.data());
+  const char *buffer[msg_rtcm->data.size()];
+  RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
+
+  for(int i = 0;i<msg_rtcm->data.size();i++){
+    buffer[i] = reinterpret_cast<const char*>(msg_rtcm->data.at(i));
+  }
+
+  serial_boost.write(reinterpret_cast<const char *>(buffer), sizeof(buffer));
 }
