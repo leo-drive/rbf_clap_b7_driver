@@ -226,19 +226,7 @@ ClapB7Driver::ClapB7Driver()
   }
   // Init ClapB7
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
-
-  if (activate_ntrip_ == "true") {
-    /*
-    if(NTRIP_client_start()){
-      RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client connected \033[0m");
-    }
-    else{
-      RCLCPP_INFO(this->get_logger(), "\033[1;31m NTRIP client cannot connected \033[0m");
-
-    }
-    */
-  }
-
+  
   RCLCPP_INFO(this->get_logger(), "ClabB7 Driver Initiliazed");
 }
 
@@ -279,15 +267,6 @@ void ClapB7Driver::timer_callback()
     RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
     RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
     RCLCPP_WARN(this->get_logger(),"freq_bestgnss_hz = %d\n", freq_bestgnss);
-
-    //For clap_bestgnss debugging
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %d\n",clapB7Controller.clap_BestGnssData.sol_status);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Velocity Type: %d\n",clapB7Controller.clap_BestGnssData.vel_type);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Latency: %f\n",clapB7Controller.clap_BestGnssData.latency);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Age: %f\n",clapB7Controller.clap_BestGnssData.age);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Horizontal speed: %lf\n",clapB7Controller.clap_BestGnssData.horizontal_speed);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Track angle: %lf\n",clapB7Controller.clap_BestGnssData.track_angle);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Vertical speed: %lf\n",clapB7Controller.clap_BestGnssData.vertical_speed);
   }
   freq_rawimu = 0;
   freq_inspvax = 0;
@@ -563,16 +542,11 @@ void ClapB7Driver::publish_twist(){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clapData.east_velocity,2)+std::pow(clapB7Controller.clapData.north_velocity,2));
   }
 
-  //Calculation of median of speed
-  speed_buffer_.push_front(total_speed_linear);
-  
-  auto median_speed = getMedianPosition(speed_buffer_);
-
   if(cos(deg2rad(clapB7Controller.clapData.azimuth - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
-    msg_twist.twist.twist.linear.x = -median_speed;
+    msg_twist.twist.twist.linear.x = -total_speed_linear;
   }
   else{
-    msg_twist.twist.twist.linear.x = median_speed;
+    msg_twist.twist.twist.linear.x = total_speed_linear;
   }
 
   t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
@@ -796,37 +770,12 @@ void ClapB7Driver::transform_enu_to_ned(tf2::Quaternion &q_in){
 
 }
 void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm) {
-  //RCLCPP_INFO(this->get_logger(),"Received Data: %d",msg_rtcm->data.data());
+
   char buffer[msg_rtcm->data.size()];
-  //RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
 
   for(int i = 0;i<msg_rtcm->data.size();i++){
     buffer[i] = msg_rtcm->data.at(i);
   }
 
   serial_boost.write(buffer, sizeof(buffer));
-}
-
-double ClapB7Driver::getMedianPosition(
-  const boost::circular_buffer<double> & speed_buffer)
-{
-  auto getMedian = [](std::vector<double> array) {
-    std::sort(std::begin(array), std::end(array));
-    const size_t median_index = array.size() / 2;
-    double median = (array.size() % 2)
-                      ? (array.at(median_index))
-                      : ((array.at(median_index) + array.at(median_index - 1)) / 2);
-    return median;
-  };
-
-  std::vector<double> array_speed;
-
-  for (const auto & speed : speed_buffer) {
-    array_speed.push_back(speed);
-  }
-
-  double median_point;
-  median_point = getMedian(array_speed);
-
-  return median_point;
 }
