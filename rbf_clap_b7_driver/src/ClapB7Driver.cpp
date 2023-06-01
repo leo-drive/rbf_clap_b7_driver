@@ -545,10 +545,10 @@ void ClapB7Driver::publish_twist(){
   }
 
   if(cos(deg2rad(clapB7Controller.clapData.azimuth - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
-    msg_twist.twist.twist.linear.x = -total_speed_linear;
+    msg_twist.twist.twist.linear.x = total_speed_linear;
   }
   else{
-    msg_twist.twist.twist.linear.x = total_speed_linear;
+    msg_twist.twist.twist.linear.x = -total_speed_linear;
   }
 
   t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
@@ -845,7 +845,7 @@ char ClapB7Driver::UTMLetterDesignator(double Lat)
 void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm) {
   //RCLCPP_INFO(this->get_logger(),"Received Data: %d",msg_rtcm->data.data());
   char buffer[msg_rtcm->data.size()];
-  //RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
+  RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
 
   for(int i = 0;i<msg_rtcm->data.size();i++){
     buffer[i] = msg_rtcm->data.at(i);

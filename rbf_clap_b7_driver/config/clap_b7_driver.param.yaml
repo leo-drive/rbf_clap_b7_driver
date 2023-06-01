@@ -21,7 +21,7 @@
     #Package name of NTRIP Client ROS
     ntrip_client_package_name: "ntrip_client_ros"
     #Subscribe to mavros_msgs/RTCM topic
-    rtcm_topic: "ntrip/rtcm"
+    rtcm_topic: "/sensing/gnss/ntrip/rtcm"
 
     ### Time System Selection 
     #   0 --> GPS Global Time 
