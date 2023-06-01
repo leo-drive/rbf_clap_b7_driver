@@ -140,29 +140,11 @@ ClapB7Driver::ClapB7Driver()
                                          ParameterDescriptor{})
                      .get<std::string>()},
 
-      coordinate_system_{static_cast<int>(this->declare_parameter(
-                         "coordinate_system",
-                         ParameterValue{4},
-                         ParameterDescriptor{})
-                     .get<int>())},
       autoware_orientation_frame_{this->declare_parameter("autoware_orientation_frame",
                                                           ParameterValue("gnss"),
                                                           ParameterDescriptor{})
                                       .get<std::string>()},
 
-      local_origin_latitude{static_cast<double>(this->declare_parameter("local_origin_latitude",
-                                                       ParameterValue(41.018738),
-                                                       ParameterDescriptor{})
-                                      .get<double>())},
-
-      local_origin_longitude{static_cast<double>(this->declare_parameter("local_origin_longitude",
-                                                                    ParameterValue(28.88742),
-                                                                    ParameterDescriptor{})
-                                              .get<double>())},
-      local_origin_altitude{static_cast<double>(this->declare_parameter("local_origin_altitude",
-                                                                     ParameterValue(117.00),
-                                                                     ParameterDescriptor{})
-                                               .get<double>())},
       // Publisher
       pub_clap_imu_{create_publisher<rbf_clap_b7_msgs::msg::ImuData>(
           clap_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -871,10 +853,6 @@ void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg
 
   serial_boost.write(buffer, sizeof(buffer));
 }
-
-  return OrthometricHeight;
-}
-
 
 void ClapB7Driver::transform_enu_to_ned(tf2::Quaternion &q_in){
 
