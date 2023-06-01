@@ -261,7 +261,7 @@ void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "Autoware Orientation Frame: %s",autoware_orientation_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Twist Frame: %s",twist_frame_.c_str());
   RCLCPP_INFO(this->get_logger(), "Debug: %s",debug_.c_str());
-  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------",debug_.c_str());
+  RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------");
 }
 
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)

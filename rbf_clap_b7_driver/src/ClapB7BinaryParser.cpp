@@ -219,6 +219,12 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                             memcpy(&p_Controller->clapData, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_InspvaxMsgs_));
                             p_Controller->ins_parser();
                         }
+                        else if(p_Controller->header.messageID == BESTGNSS_MSG_ID)
+                        {
+                            freq_inspvax++;
+                            memcpy(&p_Controller->clap_BestGnssData, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_BestGnssMsgs_));
+                            //p_Controller->ins_parser();
+                        }
                         
                     }
                     else{
