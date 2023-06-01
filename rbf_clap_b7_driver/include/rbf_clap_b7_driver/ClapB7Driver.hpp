@@ -10,6 +10,7 @@
 #include <sstream>
 #include <cstring>
 
+
 #include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Geometry>
 #include <tf2/LinearMath/Matrix3x3.h>
@@ -32,6 +33,7 @@
 #include "geometry_msgs/msg/twist_with_covariance_stamped.hpp"
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2_ros/static_transform_broadcaster.h>
+#include <mavros_msgs/msg/rtcm.hpp>
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
@@ -109,6 +111,8 @@ private:
 
     void transform_enu_to_ned(double &x, double &y, double &z);
 
+    void rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm);
+
     //Topics
     std::string clap_data_topic_;
     std::string clap_imu_topic_;
@@ -118,6 +122,7 @@ private:
     std::string autoware_orientation_topic_;
     std::string twist_topic_;
     std::string odom_topic_;
+    std::string rtcm_topic_;
 
     //NTRIP Parameters
     std::string serial_name_;
@@ -158,6 +163,9 @@ private:
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
     rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr pub_twist_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
+
+    //RTK Subscriber
+    rclcpp::Subscription<mavros_msgs::msg::RTCM>::SharedPtr sub_rtcm_;
 
     ClapB7Controller clapB7Controller;
     uint8_t ntrip_status_ = 0;
