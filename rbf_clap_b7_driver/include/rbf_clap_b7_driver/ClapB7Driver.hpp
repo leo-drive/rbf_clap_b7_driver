@@ -109,7 +109,7 @@ private:
 
     char UTMLetterDesignator(double Lat);
 
-    void transform_enu_to_ned(double &x, double &y, double &z);
+    void transform_enu_to_ned(tf2::Quaternion &q_in);
 
     void rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm);
 
