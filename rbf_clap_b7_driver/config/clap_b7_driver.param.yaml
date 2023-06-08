@@ -17,6 +17,8 @@
     autoware_orientation_topic: "clap/autoware_orientation"
     twist_topic: "clap/ros/twist_with_covariance_stamped"
     odom_topic: "clap/ros/odom"
+    raw_nav_sat_fix_topic: "clap/ros/raw_nav_sat_fix"
+    raw_imu_topic: "clap/ros/raw_imu"
 
     #Package name of NTRIP Client ROS
     ntrip_client_package_name: "ntrip_client_ros"

@@ -67,6 +67,18 @@ ClapB7Driver::ClapB7Driver()
                                       ParameterDescriptor{})
                                       .get<std::string>()},
 
+      raw_nav_sat_fix_topic_{this->declare_parameter(
+                                   "raw_nav_sat_fix_topic",
+                                   ParameterValue{"gnss/raw_gps"},
+                                   ParameterDescriptor{})
+                               .get<std::string>()},
+
+      raw_imu_topic_{this->declare_parameter(
+                           "raw_imu_topic",
+                           ParameterValue{"gnss/raw_imu"},
+                           ParameterDescriptor{})
+                       .get<std::string>()},
+
       // Serial port config
       serial_name_{this->declare_parameter(
                            "serial_name",
@@ -166,6 +178,12 @@ ClapB7Driver::ClapB7Driver()
 
       pub_odom_{create_publisher<nav_msgs::msg::Odometry>(
           odom_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_raw_nav_sat_fix_{create_publisher<sensor_msgs::msg::NavSatFix>(
+          raw_nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_raw_imu_{create_publisher<sensor_msgs::msg::Imu>(
+          raw_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       sub_rtcm_{create_subscription<mavros_msgs::msg::RTCM>(
                   rtcm_topic_,rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
@@ -880,5 +898,90 @@ void ClapB7Driver::transform_enu_to_ned(tf2::Quaternion &q_in){
   q_in.setX(q.x());
   q_in.setY(q.y());
   q_in.setZ(q.z());
+
+}
+
+void ClapB7Driver::publish_raw_nav_sat_fix(){
+  sensor_msgs::msg::NavSatFix msg_raw_nav_sat_fix;
+
+  // GNSS Raw NavSatFix Message
+  msg_raw_nav_sat_fix.header.set__frame_id(static_cast<std::string>(gnss_frame_));
+
+  msg_raw_nav_sat_fix.header.stamp.set__sec(time_sec);
+  msg_raw_nav_sat_fix.header.stamp.set__nanosec(time_nanosec);
+
+  msg_raw_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
+  msg_raw_nav_sat_fix.status.set__service(1); // GPS Connection
+
+  msg_raw_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
+  msg_raw_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
+  msg_raw_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
+
+  std::array<double, 9> pos_cov{0};
+  pos_cov[0] = std::pow(clapB7Controller.clap_ArgicData.Xigema_lat,2);
+  pos_cov[4] = std::pow(clapB7Controller.clap_ArgicData.Xigema_lon,2);
+  pos_cov[8] = std::pow(clapB7Controller.clap_ArgicData.Xigema_alt,2);
+
+  msg_raw_nav_sat_fix.set__position_covariance(pos_cov);
+
+  pub_nav_sat_fix_->publish(msg_raw_nav_sat_fix);
+
+}
+
+void ClapB7Driver::publish_raw_imu()
+{
+  sensor_msgs::msg::Imu msg_raw_imu;
+
+
+  msg_raw_imu.header.set__frame_id(static_cast<std::string>(imu_frame_));
+  msg_raw_imu.header.stamp.set__sec(time_sec);
+  msg_raw_imu.header.stamp.set__nanosec(time_nanosec);
+
+  tf2::Quaternion quart_orient;
+
+  quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Heading));
+
+
+  if(enu_ned_transform_=="true"){
+    transform_enu_to_ned(quart_orient);
+    msg_raw_imu.orientation.set__w(quart_orient.w());
+    msg_raw_imu.orientation.set__x(quart_orient.x());
+    msg_raw_imu.orientation.set__y(quart_orient.y());
+    msg_raw_imu.orientation.set__z(quart_orient.z());
+
+  }
+  else{
+    msg_raw_imu.orientation.set__w(quart_orient.getW());
+    msg_raw_imu.orientation.set__x(quart_orient.getX());
+    msg_raw_imu.orientation.set__y(quart_orient.getY());
+    msg_raw_imu.orientation.set__z(quart_orient.getZ());
+
+  }
+
+  msg_raw_imu.angular_velocity.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR * HZ_TO_SECOND));
+  msg_raw_imu.angular_velocity.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_gyro_output * (M_PI / 180) * -(GYRO_SCALE_FACTOR) * HZ_TO_SECOND));
+  msg_raw_imu.angular_velocity.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_gyro_output * (M_PI / 180) * GYRO_SCALE_FACTOR * HZ_TO_SECOND));
+
+  msg_raw_imu.linear_acceleration.set__x(static_cast<double>(clapB7Controller.clap_RawimuMsgs.x_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
+  msg_raw_imu.linear_acceleration.set__y(static_cast<double>(clapB7Controller.clap_RawimuMsgs.y_accel_output * (-ACCEL_SCALE_FACTOR) * HZ_TO_SECOND));
+  msg_raw_imu.linear_acceleration.set__z(static_cast<double>(clapB7Controller.clap_RawimuMsgs.z_accel_output * ACCEL_SCALE_FACTOR * HZ_TO_SECOND));
+
+  std::array<double, 9> orient_cov{0.001};
+
+  if(ins_active_) {
+    orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll, 2);
+    orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch, 2);
+    orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth, 2);
+  }
+
+  msg_raw_imu.set__orientation_covariance(orient_cov);
+
+  std::array<double, 9> angular_vel_cov{0.001};
+  msg_raw_imu.set__angular_velocity_covariance(angular_vel_cov);
+
+  std::array<double, 9> linear_acc_cov{0.001};
+  msg_raw_imu.set__linear_acceleration_covariance(linear_acc_cov);
+
+  pub_imu_->publish(msg_raw_imu);
 
 }

@@ -100,6 +100,9 @@ private:
                             const std::string &ref_child_frame_id,
                             const geometry_msgs::msg::Pose &ref_pose, 
                             geometry_msgs::msg::TransformStamped &ref_transform);
+    void publish_raw_nav_sat_fix();
+    void publish_raw_imu();
+
     
     double deg2rad(double degree);
     void read_parameters();
@@ -124,6 +127,8 @@ private:
     std::string twist_topic_;
     std::string odom_topic_;
     std::string rtcm_topic_;
+    std::string raw_nav_sat_fix_topic_;
+    std::string raw_imu_topic_;
 
     //NTRIP Parameters
     std::string serial_name_;
@@ -164,6 +169,8 @@ private:
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
     rclcpp::Publisher<geometry_msgs::msg::TwistWithCovarianceStamped>::SharedPtr pub_twist_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_odom_;
+    rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_raw_nav_sat_fix_;
+    rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_raw_imu_;
 
     //RTK Subscriber
     rclcpp::Subscription<mavros_msgs::msg::RTCM>::SharedPtr sub_rtcm_;
