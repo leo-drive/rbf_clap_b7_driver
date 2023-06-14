@@ -214,8 +214,9 @@ typedef struct
     ClapB7_BestGnssMsgs_ clap_BestGnssData;
     std::function<void()> ins_parser;
     std::function<void()> imu_parser;
+    std::function<void()> agric_parser;
 } ClapB7Controller;
 
 
-void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback);
+void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback,const std::function<void()> agric_callback);
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len);
