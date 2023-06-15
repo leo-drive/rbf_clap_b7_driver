@@ -188,6 +188,13 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                     {
                         freq_agric++;
                         memcpy(&p_Controller->clap_ArgicData, (p_Controller->rawData + HEADER_LEN_AGRIC), sizeof(ClapB7_AgricMsg_));
+
+                        p_Controller->clap_ArgicData.Heading -= 90.0;
+                        if(p_Controller->clap_ArgicData.Heading <0){
+                            p_Controller->clap_ArgicData.Heading += 360;
+                        }
+
+                        RCLCPP_ERROR(rclcpp::get_logger("rclcpp"),"True heading: %lf",p_Controller->clap_ArgicData.Heading);
                         p_Controller->agric_parser();
                     }
                     else{

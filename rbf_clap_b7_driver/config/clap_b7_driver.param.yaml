@@ -28,7 +28,7 @@
     ### Time System Selection 
     #   0 --> GPS Global Time 
     #   1 --> ROS Rclcpp System time     
-    time_system_selection: 0
+    time_system_selection: true
 
     ### ENU -> NED Transform Selection
     enu_ned_transform: "false"

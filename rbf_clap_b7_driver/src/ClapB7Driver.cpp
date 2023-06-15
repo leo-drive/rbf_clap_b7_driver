@@ -133,9 +133,9 @@ ClapB7Driver::ClapB7Driver()
 
       time_system_{this->declare_parameter(
                            "time_system_selection",
-                           ParameterValue{0},
+                           ParameterValue{true},
                            ParameterDescriptor{})
-                       .get<int>()},
+                       .get<bool>()},
 
       gnss_frame_{this->declare_parameter("gnss_frame",
                                           ParameterValue("gnss"),
@@ -404,11 +404,10 @@ void ClapB7Driver::pub_ins_data() {
 
     publish_nav_sat_fix();
   }
-    
   publish_std_imu();
   publish_twist();
   publish_orientation();
-  publish_odom();
+  //publish_odom();
 
   pub_clap_ins_->publish(msg_ins_data);
 
@@ -417,6 +416,7 @@ void ClapB7Driver::pub_ins_data() {
 void ClapB7Driver::pub_agric_data()
 {
     rbf_clap_b7_msgs::msg::AgricData msg_agric_data;
+
 
     msg_agric_data.gnss_char = clapB7Controller.clap_ArgicData.gnss_char;
     msg_agric_data.command_lenght = clapB7Controller.clap_ArgicData.command_length;
@@ -491,11 +491,12 @@ void ClapB7Driver::pub_agric_data()
 
     msg_agric_data.crc_hex = clapB7Controller.clap_ArgicData.crc_hex;
 
+
+
     pub_clap_agric_->publish(msg_agric_data);
 
     publish_raw_imu();
     publish_raw_nav_sat_fix();
-    RCLCPP_ERROR(this->get_logger(), "TRUE HEADING = %lf", clapB7Controller.clap_ArgicData.Heading);
 
 }
 
@@ -673,14 +674,16 @@ void ClapB7Driver::publish_orientation()
 
   msg_gnss_orientation.header.set__frame_id(static_cast<std::string>(autoware_orientation_frame_));
   msg_gnss_orientation.header.stamp = header_.stamp;
-
+/*
     if(ins_active_ == 0){
         quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(-clapB7Controller.clap_ArgicData.Heading));
     }
-    else if(ins_active_ == 1){
-        quart_orient.setRPY(deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.roll), deg2rad(-clapB7Controller.clapData.azimuth));
+    else if(ins_active_ == 1)*/{
+
+        quart_orient.setRPY(deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.roll), deg2rad(-clapB7Controller.clap_ArgicData.Heading+90));
     }
 
+    RCLCPP_ERROR(this->get_logger(),"Nort gönderilen: %lf", -clapB7Controller.clap_ArgicData.Heading+90);
   if(enu_ned_transform_=="true"){
 
     transform_enu_to_ned(quart_orient);

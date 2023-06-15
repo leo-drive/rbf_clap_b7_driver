@@ -180,7 +180,7 @@ private:
     std::string enu_ned_transform_;
     std::string debug_;
 
-    int time_system_;
+    bool time_system_;
     int64_t time_sec;
     int64_t time_nanosec;
     std_msgs::msg::Header header_;
