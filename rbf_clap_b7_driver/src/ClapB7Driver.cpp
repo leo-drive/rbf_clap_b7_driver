@@ -658,7 +658,7 @@ void ClapB7Driver::publish_odom(){
   // Fill in the message.
   msg_odom.header.stamp = header_.stamp;
 
-  msg_odom.header.set__frame_id("odom");
+  msg_odom.header.set__frame_id("gnss_ins_fix_frame");
   msg_odom.set__child_frame_id(static_cast<std::string>(gnss_frame_));
 
 
@@ -688,7 +688,7 @@ void ClapB7Driver::publish_odom(){
   msg_odom.twist.covariance[4*6 + 4] = 0;
   msg_odom.twist.covariance[5*6 + 5] = 0;
 
-  publish_transform(msg_odom.header.frame_id, "dummy", msg_odom.pose.pose,transform);
+  publish_transform(msg_odom.header.frame_id, "gnss_ins_base_frame", msg_odom.pose.pose,transform);
   pub_odom_->publish(msg_odom);
 
 }
