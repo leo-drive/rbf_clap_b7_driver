@@ -135,7 +135,7 @@ ClapB7Driver::ClapB7Driver()
                            "time_system_selection",
                            ParameterValue{0},
                            ParameterDescriptor{})
-                       .get<bool>()},
+                       .get<int>()},
 
       gnss_frame_{this->declare_parameter("gnss_frame",
                                           ParameterValue("gnss"),
@@ -184,6 +184,9 @@ ClapB7Driver::ClapB7Driver()
 
       pub_raw_imu_{create_publisher<sensor_msgs::msg::Imu>(
           raw_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_clap_agric_{create_publisher<rbf_clap_b7_msgs::msg::AgricData>(
+          "clap/clap_msgs/clap_agric", rclcpp::QoS{10}, PubAllocT{})},
 
       sub_rtcm_{create_subscription<mavros_msgs::msg::RTCM>(
                   rtcm_topic_,rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
@@ -413,6 +416,82 @@ void ClapB7Driver::pub_ins_data() {
 
 void ClapB7Driver::pub_agric_data()
 {
+    rbf_clap_b7_msgs::msg::AgricData msg_agric_data;
+
+    msg_agric_data.gnss_char = clapB7Controller.clap_ArgicData.gnss_char;
+    msg_agric_data.command_lenght = clapB7Controller.clap_ArgicData.command_length;
+    msg_agric_data.year = clapB7Controller.clap_ArgicData.year;
+    msg_agric_data.month = clapB7Controller.clap_ArgicData.month;
+    msg_agric_data.day = clapB7Controller.clap_ArgicData.day;
+    msg_agric_data.hour = clapB7Controller.clap_ArgicData.hour;
+    msg_agric_data.minute = clapB7Controller.clap_ArgicData.minute;
+    msg_agric_data.second = clapB7Controller.clap_ArgicData.second;
+
+    msg_agric_data.rtk_status = clapB7Controller.clap_ArgicData.RtkStatus;
+    msg_agric_data.heading_status = clapB7Controller.clap_ArgicData.HeadingStatus;
+    msg_agric_data.num_gps_sat = clapB7Controller.clap_ArgicData.numGPSsat;
+    msg_agric_data.num_bds_sat = clapB7Controller.clap_ArgicData.numBDSsat;
+    msg_agric_data.num_gal_sat = clapB7Controller.clap_ArgicData.numGLOsat;
+
+    msg_agric_data.baseline_n = clapB7Controller.clap_ArgicData.Baseline_N;
+    msg_agric_data.baseline_e = clapB7Controller.clap_ArgicData.Baseline_E;
+    msg_agric_data.baseline_u = clapB7Controller.clap_ArgicData.Baseline_U;
+    msg_agric_data.baseline_n_stddev = clapB7Controller.clap_ArgicData.Baseline_NStd;
+    msg_agric_data.baseline_e_stddev = clapB7Controller.clap_ArgicData.Baseline_EStd;
+    msg_agric_data.baseline_u_stddev = clapB7Controller.clap_ArgicData.Baseline_UStd;
+
+    msg_agric_data.heading = clapB7Controller.clap_ArgicData.Heading;
+    msg_agric_data.pitch = clapB7Controller.clap_ArgicData.Pitch;
+    msg_agric_data.roll = clapB7Controller.clap_ArgicData.Roll;
+    msg_agric_data.speed = clapB7Controller.clap_ArgicData.Speed;
+    msg_agric_data.velocity_e = clapB7Controller.clap_ArgicData.Velocity_E;
+    msg_agric_data.velocity_n = clapB7Controller.clap_ArgicData.Velocity_N;
+    msg_agric_data.velocity_u = clapB7Controller.clap_ArgicData.Velocity_U;
+
+    msg_agric_data.xigema_vx = clapB7Controller.clap_ArgicData.Xigema_Vx;
+    msg_agric_data.xigema_vy = clapB7Controller.clap_ArgicData.Xigema_Vy;
+    msg_agric_data.xigema_vz = clapB7Controller.clap_ArgicData.Xigema_Vz;
+
+    msg_agric_data.lat = clapB7Controller.clap_ArgicData.lat;
+    msg_agric_data.lon = clapB7Controller.clap_ArgicData.lon;
+    msg_agric_data.het = clapB7Controller.clap_ArgicData.Het;
+
+    msg_agric_data.ecef_x = clapB7Controller.clap_ArgicData.ecef_x;
+    msg_agric_data.ecef_y = clapB7Controller.clap_ArgicData.ecef_y;
+    msg_agric_data.ecef_z = clapB7Controller.clap_ArgicData.ecef_z;
+
+    msg_agric_data.xigema_lat = clapB7Controller.clap_ArgicData.Xigema_lat;
+    msg_agric_data.xigema_lon = clapB7Controller.clap_ArgicData.Xigema_lon;
+    msg_agric_data.xigema_alt = clapB7Controller.clap_ArgicData.Xigema_alt;
+
+    msg_agric_data.xigema_ecef_x = clapB7Controller.clap_ArgicData.Xigema_ecef_x;
+    msg_agric_data.xigema_ecef_y = clapB7Controller.clap_ArgicData.Xigema_ecef_y;
+    msg_agric_data.xigema_ecef_z = clapB7Controller.clap_ArgicData.Xigema_ecef_z;
+
+    msg_agric_data.base_lat = clapB7Controller.clap_ArgicData.base_lat;
+    msg_agric_data.base_lon = clapB7Controller.clap_ArgicData.base_lon;
+    msg_agric_data.base_alt = clapB7Controller.clap_ArgicData.base_alt;
+
+    msg_agric_data.sec_lat = clapB7Controller.clap_ArgicData.sec_lat;
+    msg_agric_data.sec_lon = clapB7Controller.clap_ArgicData.sec_lon;
+    msg_agric_data.sec_alt = clapB7Controller.clap_ArgicData.sec_alt;
+
+    msg_agric_data.gps_week_second = clapB7Controller.clap_ArgicData.gps_week_second;
+    msg_agric_data.diffage = clapB7Controller.clap_ArgicData.diffage;
+    msg_agric_data.speed_heading = clapB7Controller.clap_ArgicData.speed_heading;
+    msg_agric_data.undulation = clapB7Controller.clap_ArgicData.undulation;
+
+    msg_agric_data.remain_float3 = clapB7Controller.clap_ArgicData.remain_float3;
+    msg_agric_data.remain_float4 = clapB7Controller.clap_ArgicData.remain_float4;
+
+    msg_agric_data.num_gal_sat = clapB7Controller.clap_ArgicData.numGALsat;
+    msg_agric_data.remain_char2 = clapB7Controller.clap_ArgicData.remain_char2;
+    msg_agric_data.remain_char3 = clapB7Controller.clap_ArgicData.remain_char3;
+    msg_agric_data.remain_char4 = clapB7Controller.clap_ArgicData.remain_char4;
+
+    msg_agric_data.crc_hex = clapB7Controller.clap_ArgicData.crc_hex;
+
+    pub_clap_agric_->publish(msg_agric_data);
 
     publish_raw_imu();
     publish_raw_nav_sat_fix();

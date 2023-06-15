@@ -42,6 +42,7 @@
 #include <rbf_clap_b7_msgs/msg/clap_data.hpp>
 #include <rbf_clap_b7_msgs/msg/imu_data.hpp>
 #include <rbf_clap_b7_msgs/msg/ins_data.hpp>
+#include <rbf_clap_b7_msgs/msg/agric_data.hpp>
 
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
@@ -78,7 +79,7 @@ public:
     ~ClapB7Driver() override {
         serial_boost.close();
     }
-    void pub_agric_data();
+
 
     void serial_receive_callback(const char *data, unsigned int len);
 
@@ -123,7 +124,7 @@ private:
     void timer_callback();
     void pub_imu_data();
     void pub_ins_data();
-
+    void pub_agric_data();
     void publish_nav_sat_fix();
     void publish_std_imu();
     int64_t ros_time_to_gps_time_nano();
@@ -179,7 +180,7 @@ private:
     std::string enu_ned_transform_;
     std::string debug_;
 
-    bool time_system_;
+    int time_system_;
     int64_t time_sec;
     int64_t time_nanosec;
     std_msgs::msg::Header header_;
@@ -198,6 +199,7 @@ private:
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ClapData>::SharedPtr pub_clap_data_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ImuData>::SharedPtr pub_clap_imu_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::InsData>::SharedPtr pub_clap_ins_;
+    rclcpp::Publisher<rbf_clap_b7_msgs::msg::AgricData>::SharedPtr pub_clap_agric_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_imu_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;
