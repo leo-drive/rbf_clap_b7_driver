@@ -69,7 +69,8 @@ static uint32_t CalculateCRC32(uint8_t *szBuf, int iSize)
     return ulCRC;
 }
 
-void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback)
+void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback,
+                const std::function<void()> agric_callback)
 {
     uint16_t i;
     for ( i = 0; i < sizeof(ClapB7Controller); i++)
@@ -78,6 +79,7 @@ void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_
     }
     p_Controller->ins_parser = ins_callback;
     p_Controller->imu_parser = imu_callback;
+    p_Controller->agric_parser = agric_callback;
 }
 
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len)
@@ -186,7 +188,7 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                     {
                         freq_agric++;
                         memcpy(&p_Controller->clap_ArgicData, (p_Controller->rawData + HEADER_LEN_AGRIC), sizeof(ClapB7_AgricMsg_));
-                        p_Controller->ins_parser();
+                        p_Controller->agric_parser();
                     }
                     else{
                         //scanned bytes don't contain meaningful data

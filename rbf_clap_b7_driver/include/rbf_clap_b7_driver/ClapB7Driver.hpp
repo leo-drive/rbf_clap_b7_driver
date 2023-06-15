@@ -37,6 +37,7 @@
 
 #include "std_msgs/msg/string.hpp"
 #include "std_msgs/msg/u_int8.hpp"
+#include "std_msgs/msg/header.hpp"
 
 #include <rbf_clap_b7_msgs/msg/clap_data.hpp>
 #include <rbf_clap_b7_msgs/msg/imu_data.hpp>
@@ -72,6 +73,7 @@ public:
     ~ClapB7Driver() override {
         serial_boost.close();
     }
+    void pub_agric_data();
 
     void serial_receive_callback(const char *data, unsigned int len);
 
@@ -145,6 +147,7 @@ private:
     int time_system_;
     int64_t time_sec;
     int64_t time_nanosec;
+    std_msgs::msg::Header header_;
 
     bool ins_active_;
 
