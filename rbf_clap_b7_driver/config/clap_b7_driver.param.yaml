@@ -40,3 +40,17 @@
     twist_frame: "GNSS_INS/gnss_ins_link"
 
     debug: "true"
+
+    ### Coordinate System Parameter
+    #UTM = 0,
+    #MGRS = 1,
+    #PLANE = 2,
+    #LOCAL_CARTESIAN_WGS84 = 3,
+    #LOCAL_CARTESIAN_UTM = 4
+    coordinate_system: 4
+    # Latitude of local origin
+    local_origin_latitude: 40.81187906
+    # Longitude of local origin
+    local_origin_longitude: 29.35810110
+    # Altitude of local origin
+    local_origin_altitude: 47.62

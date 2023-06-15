@@ -46,6 +46,11 @@
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
 
+#include <GeographicLib/Geoid.hpp>
+#include <GeographicLib/LocalCartesian.hpp>
+#include <GeographicLib/MGRS.hpp>
+#include <GeographicLib/UTMUPS.hpp>
+
 #define ACCEL_SCALE_FACTOR (400 / (pow(2, 31)))
 #define GYRO_SCALE_FACTOR (2160 / (pow(2, 31)))
 #define HZ_TO_SECOND ( 100 )
@@ -79,18 +84,46 @@ public:
 
 private:
 
-    typedef struct _UTM0
+    enum class CoordinateSystem {
+      UTM = 0,
+      MGRS = 1,
+      PLANE = 2,
+      LOCAL_CARTESIAN_WGS84 = 3,
+      LOCAL_CARTESIAN_UTM = 4
+    };
+    struct GNSSStat
     {
-        double			easting;
-        double			northing;
-        double			altitude;
-        int				zone;
-    } UTM0;
+          GNSSStat()
+          : coordinate_system(CoordinateSystem::MGRS),
+            east_north_up(true),
+            zone(0),
+            mgrs_zone(""),
+            x(0),
+            y(0),
+            z(0),
+            latitude(0),
+            longitude(0),
+            altitude(0)
+          {
+          }
+
+          CoordinateSystem coordinate_system;
+          bool east_north_up;
+          int zone;
+          std::string mgrs_zone;
+          double x;
+          double y;
+          double z;
+          double latitude;
+          double longitude;
+          double altitude;
+    };
+
     
     void timer_callback();
     void pub_imu_data();
     void pub_ins_data();
-    bool NTRIP_client_start();
+
     void publish_nav_sat_fix();
     void publish_std_imu();
     int64_t ros_time_to_gps_time_nano();
@@ -109,15 +142,17 @@ private:
     double deg2rad(double degree);
     void read_parameters();
 
-    void LLtoUTM(double Lat, double Long, int zoneNumber, double &UTMNorthing, double &UTMEasting);
-    double computeMeridian(int zone_number);
-    void initUTM(double Lat, double Long, double altitude);
-
-    char UTMLetterDesignator(double Lat);
 
     void transform_enu_to_ned(tf2::Quaternion &q_in);
 
     void rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm);
+
+    double EllipsoidHeight2OrthometricHeight(
+      const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg);
+
+    GNSSStat NavSatFix2LocalCartesianUTM(
+      const sensor_msgs::msg::NavSatFix & nav_sat_fix_msg,
+      sensor_msgs::msg::NavSatFix nav_sat_fix_origin);
 
     //Topics
     std::string clap_data_topic_;
@@ -144,16 +179,12 @@ private:
     std::string enu_ned_transform_;
     std::string debug_;
 
-    int time_system_;
+    bool time_system_;
     int64_t time_sec;
     int64_t time_nanosec;
     std_msgs::msg::Header header_;
 
     bool ins_active_;
-
-    UTM0 m_utm0_;    
-
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_odom_;
 
     //Frame Names
     std::string gnss_frame_;
@@ -186,7 +217,14 @@ private:
 
     std::once_flag flag_ins_active;
 
+    int coordinate_system_;
+    double local_origin_latitude_;
+    double local_origin_longitude_;
+    double local_origin_altitude_;
+
     rclcpp::TimerBase::SharedPtr timer_;
+
+    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_odom_;
 };
 
 
