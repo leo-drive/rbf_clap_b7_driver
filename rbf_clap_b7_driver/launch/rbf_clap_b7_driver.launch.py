@@ -41,7 +41,7 @@ def generate_launch_description():
             )
             ld.add_action(ntrip_client_ros_launch)
         except:
-            print("\033[1;31mCouldnt find ntrip_client_ros package\033[0m")
+            print("\033[1;31mCould not find {0} package\033[0m".format(ntrip_client_pack))
 
     ld.add_action(node)
     return ld

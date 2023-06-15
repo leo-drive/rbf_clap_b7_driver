@@ -1,6 +1,11 @@
-//
-// Created by arslan on 22.05.2022.
-//
+/*!
+*	\file         ClapB7driver.hpp
+*	\author       Robeff Technology - farukbaykara
+*	\date         22/05/2022
+*
+*	\brief        Manage publishment of IMU and GNSS data as ROS and custom ros messages.
+*/
+
 #pragma once
 
 #include <chrono>
@@ -67,16 +72,34 @@ extern int freq_bestgnss;
 class ClapB7Driver : public rclcpp::Node
 {
 public:
+
+    //---------------------------------------------------------------------//
+    //- Constructor                                                       -//
+    //---------------------------------------------------------------------//
+
+    /*!
+     * Default constructor.
+     */
     ClapB7Driver();
 
+
+    //Destructur
     ~ClapB7Driver() override {
         serial_boost.close();
     }
 
+    /*!
+     * @brief Callback function for serial port data reception.
+     * @param data Received data.
+     * @param len Received data length.
+     * */
     void serial_receive_callback(const char *data, unsigned int len);
 
 private:
 
+    /*!
+     * @brief Struct for UTM0 coordinates
+     * */
     typedef struct _UTM0
     {
         double			easting;
@@ -86,35 +109,103 @@ private:
     } UTM0;
     
     void timer_callback();
+
+    /*!
+     * @brief Publish custom ROS IMU and INS-GNSS data
+     * */
     void pub_imu_data();
     void pub_ins_data();
-    bool NTRIP_client_start();
+
+    /*!
+     * @brief Publish received EKF ROS Nav_sat_fix messages
+     * */
     void publish_nav_sat_fix();
+
+    /*!
+     * @brief Publish received EKF ROS IMU messages
+     * */
     void publish_std_imu();
+
+    /*!
+     * @brief Get current ROS time and convert it to GPS time in nano seconds.
+     * */
     int64_t ros_time_to_gps_time_nano();
+
+    /*!
+     * @brief Publish received ROS Raw Nav_Sat_Fix message
+     * */
     void publish_standart_msgs_agric();
+
+    /*!
+     * @brief Publish received EKF ROS Twist with Covairance Stamped message
+     * */
     void publish_twist();
+
+    /*!
+     * @brief Publish received EKF Autoware Orientation message
+     * */
     void publish_orientation();
+
+    /*!
+     * @brief Publish received EKF ROS Odometry message
+     * */
     void publish_odom();
-    void publish_transform(const std::string &ref_parent_frame_id, 
+
+    /*!
+     * @brief Publish tf2::TransformStamped message using parent frame to child frame
+     * @param ref_parent_frame_id Parent frame id
+     * @param ref_child_frame_id Child frame id
+     * @param ref_pose Pose of child frame in parent frame
+     * @param ref_transform TransformStamped message to be published
+     * */
+    void publish_transform(const std::string &ref_parent_frame_id,
                             const std::string &ref_child_frame_id,
                             const geometry_msgs::msg::Pose &ref_pose, 
                             geometry_msgs::msg::TransformStamped &ref_transform);
+
+    /*!
+     * @brief Publish received raw GPS ROS Nav_sat_fix message
+     * */
     void publish_raw_nav_sat_fix();
+
+    /*!
+     * @brief Publish received raw GPS ROS IMU message
+     * */
     void publish_raw_imu();
 
-    
+    /*!
+     * @brief Return 'degree' param to radian
+     * @param degree Degree value to be converted
+     * */
     double deg2rad(double degree);
+
+    /*!
+     * @brief Write parameters read from YAML file to terminal in start of node
+     * */
     void read_parameters();
 
+    /*!
+     * Lat-Lon to UTM conversion functions
+     * */
     void LLtoUTM(double Lat, double Long, int zoneNumber, double &UTMNorthing, double &UTMEasting);
+
     double computeMeridian(int zone_number);
+
     void initUTM(double Lat, double Long, double altitude);
 
     char UTMLetterDesignator(double Lat);
 
+
+    /*!
+     * @brief Convert ENU to NED
+     * @param q_in Quaternion to be converted
+     * */
     void transform_enu_to_ned(tf2::Quaternion &q_in);
 
+    /*!
+     * @brief Callback definition for RTK RTCM message received from NTRIP client topic
+     * @param msg_rtcm RTCM message received from NTRIP client
+     * */
     void rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm);
 
     //Topics
@@ -131,26 +222,24 @@ private:
     std::string raw_imu_topic_;
 
     //NTRIP Parameters
-    std::string serial_name_;
-    std::string ntrip_server_ip_;
-    std::string username_;
-    std::string password_;
-    std::string mount_point_;
-    int ntrip_port_;
     std::string activate_ntrip_;
+
+    //Serial port params
+    std::string serial_name_;
     long baud_rate_;
     std::string enu_ned_transform_;
     std::string debug_;
 
-    int time_system_;
+    //GPS time variables
+    bool time_system_;
     int64_t time_sec;
     int64_t time_nanosec;
 
+    //'True' if INS is active
     bool ins_active_;
 
     UTM0 m_utm0_;    
 
-    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_odom_;
 
     //Frame Names
     std::string gnss_frame_;
@@ -172,18 +261,17 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_raw_nav_sat_fix_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_raw_imu_;
 
-    //RTK Subscriber
+    //RTK RTCM message Subscriber
     rclcpp::Subscription<mavros_msgs::msg::RTCM>::SharedPtr sub_rtcm_;
 
+    //ClapB7Controller object to store received data
     ClapB7Controller clapB7Controller;
-    uint8_t ntrip_status_ = 0;
-    libntrip::NtripClient ntripClient;
-    int t_size;
-    const float g_ = 9.81f;
 
     std::once_flag flag_ins_active;
 
     rclcpp::TimerBase::SharedPtr timer_;
+
+    std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_odom_;
 };
 
 

@@ -34,33 +34,35 @@ ClapB7Driver::ClapB7Driver()
       // Std. imu topic
       imu_topic_{this->declare_parameter(
                          "imu_topic",
-                         ParameterValue{"gnss/imu"},
+                         ParameterValue{"clap/ros/imu"},
                          ParameterDescriptor{})
                      .get<std::string>()},
       // std. msgs
       nav_sat_fix_topic_{this->declare_parameter(
                                  "nav_sat_fix_topic",
-                                 ParameterValue{"gnss/gps"},
+                                 ParameterValue{"clap/ros/gps_nav_sat_fix"},
                                  ParameterDescriptor{})
                              .get<std::string>()},
       
-      twist_topic_{this->declare_parameter(
-                                 "twist_topic",
-                                 ParameterValue{"gnss/twist"},
-                                 ParameterDescriptor{})
-                             .get<std::string>()},
-
-      odom_topic_{this->declare_parameter(
-                                 "odom_topic",
-                                 ParameterValue{"gnss/odom"},
-                                 ParameterDescriptor{})
-                             .get<std::string>()},
 
 
       autoware_orientation_topic_{this->declare_parameter("autoware_orientation_topic",
-                            ParameterValue("gnss/autoware_orientation"),
+                            ParameterValue("clap/autoware_orientation"),
                             ParameterDescriptor{})
         .get<std::string>()},
+
+      twist_topic_{this->declare_parameter(
+                         "twist_topic",
+                         ParameterValue{"clap/ros/twist_with_covariance_stamped"},
+                         ParameterDescriptor{})
+                     .get<std::string>()},
+
+      odom_topic_{this->declare_parameter(
+                        "odom_topic",
+                        ParameterValue{"clap/ros/odom"},
+                        ParameterDescriptor{})
+                    .get<std::string>()},
+
 
       rtcm_topic_{this->declare_parameter("rtcm_topic",
                                       ParameterValue("ntrip/rtcm"),
@@ -69,62 +71,32 @@ ClapB7Driver::ClapB7Driver()
 
       raw_nav_sat_fix_topic_{this->declare_parameter(
                                    "raw_nav_sat_fix_topic",
-                                   ParameterValue{"gnss/raw_gps"},
+                                   ParameterValue{"clap/gps_raw"},
                                    ParameterDescriptor{})
                                .get<std::string>()},
 
       raw_imu_topic_{this->declare_parameter(
                            "raw_imu_topic",
-                           ParameterValue{"gnss/raw_imu"},
+                           ParameterValue{"clap/imu_raw"},
                            ParameterDescriptor{})
                        .get<std::string>()},
 
-      // Serial port config
-      serial_name_{this->declare_parameter(
-                           "serial_name",
-                           ParameterValue{"/dev/ttyUSB0"},
-                           ParameterDescriptor{})
-                       .get<std::string>()},
-
-      baud_rate_{this->declare_parameter(
-                         "baud_rate",
-                         ParameterValue{460800},
-                         ParameterDescriptor{})
-                     .get<long>()},
-
-      ntrip_server_ip_{this->declare_parameter("ntrip_ip",
-                                                     ParameterValue("212.156.70.42"),
-                                                     ParameterDescriptor{})
-                                     .get<std::string>()},
-
-      username_{this->declare_parameter("ntrip_user_name",
-                                              ParameterValue("K0734151301"),
-                                              ParameterDescriptor{})
-                              .get<std::string>()},
-
-      password_{this->declare_parameter("ntrip_password",
-                                              ParameterValue("GzMSQg"),
-                                              ParameterDescriptor{})
-                              .get<std::string>()},
-
-      debug_{this->declare_parameter("debug",
-                                        ParameterValue("false"),
-                                        ParameterDescriptor{})
-                  .get<std::string>()},
-
-      mount_point_{this->declare_parameter("ntrip_mount_point",
-                                                 ParameterValue("VRSRTCM31"),
-                                                 ParameterDescriptor{})
-                                 .get<std::string>()},
-
-      ntrip_port_{static_cast<int>(this->declare_parameter("ntrip_port",
-                                                                 ParameterValue(2101),
-                                                                 ParameterDescriptor{})
-                                                                 .get<int>())},
       activate_ntrip_{this->declare_parameter("activate_ntrip",
                                               ParameterValue("true"),
                                               ParameterDescriptor{})
                                .get<std::string>()},
+      // Serial port config
+      serial_name_{this->declare_parameter(
+                         "serial_name",
+                         ParameterValue{"/dev/ttyUSB0"},
+                         ParameterDescriptor{})
+                     .get<std::string>()},
+
+      baud_rate_{this->declare_parameter(
+                       "baud_rate",
+                       ParameterValue{460800},
+                       ParameterDescriptor{})
+                   .get<long>()},
 
       enu_ned_transform_{this->declare_parameter("enu_ned_transform",
                                               ParameterValue("true"),
@@ -135,7 +107,7 @@ ClapB7Driver::ClapB7Driver()
                            "time_system_selection",
                            ParameterValue{0},
                            ParameterDescriptor{})
-                       .get<int>()},
+                       .get<bool>()},
 
       gnss_frame_{this->declare_parameter("gnss_frame",
                                           ParameterValue("gnss"),
@@ -147,15 +119,15 @@ ClapB7Driver::ClapB7Driver()
                                          ParameterDescriptor{})
                      .get<std::string>()},
 
-      twist_frame_{this->declare_parameter("twist_frame",
-                                         ParameterValue("gnss"),
-                                         ParameterDescriptor{})
-                     .get<std::string>()},
-
       autoware_orientation_frame_{this->declare_parameter("autoware_orientation_frame",
                                                           ParameterValue("gnss"),
                                                           ParameterDescriptor{})
                                       .get<std::string>()},
+
+      twist_frame_{this->declare_parameter("twist_frame",
+                                           ParameterValue("gnss"),
+                                           ParameterDescriptor{})
+                     .get<std::string>()},
 
       // Publisher
       pub_clap_imu_{create_publisher<rbf_clap_b7_msgs::msg::ImuData>(
@@ -170,11 +142,11 @@ ClapB7Driver::ClapB7Driver()
       pub_nav_sat_fix_{create_publisher<sensor_msgs::msg::NavSatFix>(
           nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
-      pub_twist_{create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
-          twist_topic_, rclcpp::QoS{10}, PubAllocT{})},
-
       pub_gnss_orientation_{create_publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>(
           autoware_orientation_topic_, rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_twist_{create_publisher<geometry_msgs::msg::TwistWithCovarianceStamped>(
+        twist_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       pub_odom_{create_publisher<nav_msgs::msg::Odometry>(
           odom_topic_, rclcpp::QoS{10}, PubAllocT{})},
@@ -186,21 +158,21 @@ ClapB7Driver::ClapB7Driver()
           raw_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       sub_rtcm_{create_subscription<mavros_msgs::msg::RTCM>(
-                  rtcm_topic_,rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
+        rtcm_topic_,rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
       // Timer
       timer_{this->create_wall_timer(
-          1000ms, std::bind(&ClapB7Driver::timer_callback, this))},
-      
+        1000ms, std::bind(&ClapB7Driver::timer_callback, this))},
+
       tf_broadcaster_odom_{nullptr}
 
 {
   using namespace std::placeholders;
 
   read_parameters();
-  // Set serial callback
+
   tf_broadcaster_odom_ = std::make_shared<tf2_ros::TransformBroadcaster>(this);
 
-
+  //Opens serial port to communicate with Clap.
   try{
     serial_boost.open(serial_name_, baud_rate_);
   }catch(boost::system::system_error& e){
@@ -209,6 +181,7 @@ ClapB7Driver::ClapB7Driver()
         
   }
 
+  //Checks if serial port is opened or not, if opened, calls serial receive callback func.
   if(serial_boost.isOpen() == false){
     RCLCPP_INFO(
         rclcpp::get_logger("rclcpp"), 
@@ -222,32 +195,17 @@ ClapB7Driver::ClapB7Driver()
     serial_boost.setCallback(bind(&ClapB7Driver::serial_receive_callback, this, _1, _2));
 
   }
+
   // Init ClapB7
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this));
-
-  if (activate_ntrip_ == "true") {
-    /*
-    if(NTRIP_client_start()){
-      RCLCPP_INFO(this->get_logger(), "\033[1;32m NTRIP client connected \033[0m");
-    }
-    else{
-      RCLCPP_INFO(this->get_logger(), "\033[1;31m NTRIP client cannot connected \033[0m");
-
-    }
-    */
-  }
 
   RCLCPP_INFO(this->get_logger(), "ClabB7 Driver Initiliazed");
 }
 
+
 void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "Parameters");
-  RCLCPP_INFO(this->get_logger(), "NTRIP Serial Name: %s",serial_name_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP Server ID: %s",ntrip_server_ip_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP UserName: %s",username_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP Password: %s",password_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP MountPoint: %s",mount_point_.c_str());
-  RCLCPP_INFO(this->get_logger(), "NTRIP Port: %d",ntrip_port_);
+  RCLCPP_INFO(this->get_logger(), "Serial Name: %s",serial_name_.c_str());
   RCLCPP_INFO(this->get_logger(), "Activate NTRIP: %s",activate_ntrip_.c_str());
   RCLCPP_INFO(this->get_logger(), "Clap Data Topic: %s",clap_data_topic_.c_str());
   RCLCPP_INFO(this->get_logger(), "Clap INS Data Topic: %s",clap_ins_topic_.c_str());
@@ -265,6 +223,7 @@ void ClapB7Driver::read_parameters(){
   RCLCPP_INFO(this->get_logger(), "-----------------------------------------------------");
 }
 
+
 void ClapB7Driver::serial_receive_callback(const char *data, unsigned int len)
 {
   ClapB7Parser(&clapB7Controller, reinterpret_cast<const uint8_t *>(data), len);
@@ -277,25 +236,18 @@ void ClapB7Driver::timer_callback()
     RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
     RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
     RCLCPP_WARN(this->get_logger(),"freq_bestgnss_hz = %d\n", freq_bestgnss);
-
-    //For clap_bestgnss debugging
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %d\n",clapB7Controller.clap_BestGnssData.sol_status);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Velocity Type: %d\n",clapB7Controller.clap_BestGnssData.vel_type);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Latency: %f\n",clapB7Controller.clap_BestGnssData.latency);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Age: %f\n",clapB7Controller.clap_BestGnssData.age);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Horizontal speed: %lf\n",clapB7Controller.clap_BestGnssData.horizontal_speed);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Track angle: %lf\n",clapB7Controller.clap_BestGnssData.track_angle);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Vertical speed: %lf\n",clapB7Controller.clap_BestGnssData.vertical_speed);
   }
   freq_rawimu = 0;
   freq_inspvax = 0;
   freq_agric = 0;
   freq_bestgnss = 0;
 }
+
 double ClapB7Driver::deg2rad(double degree){
   return (degree * (M_PI / 180));
 
 }
+
 void ClapB7Driver::pub_imu_data()
 {
 
@@ -386,6 +338,9 @@ void ClapB7Driver::pub_ins_data() {
   publish_twist();
   publish_orientation();
   publish_odom();
+  publish_raw_imu();
+  publish_raw_nav_sat_fix();
+
 
   pub_clap_ins_->publish(msg_ins_data);
 
@@ -507,29 +462,6 @@ void ClapB7Driver::publish_std_imu(){
 
 }
 
-bool ClapB7Driver::NTRIP_client_start()
-{
-
-  ntripClient.Init(ntrip_server_ip_, ntrip_port_, username_, password_, mount_point_);
-  ntripClient.OnReceived([this](const char *buffer, int size)
-                         {
-
-                             serial_boost.write(buffer, size);
-
-                             t_size += size;
-                             if(debug_ == "true"){
-                              RCLCPP_INFO(this->get_logger(), "NTRIP Data size: %d",t_size);
-                              RCLCPP_INFO(this->get_logger(), "NTRIP Status: %d",ntripClient.service_is_running());
-                             }
-
-                          });
-
-  ntripClient.set_location(41.018893949, 28.890924848);
-
-  ntripClient.set_report_interval(0.001);
-  return ntripClient.Run();
-}
-
 int64_t ClapB7Driver::ros_time_to_gps_time_nano()
 {
 
@@ -549,11 +481,11 @@ void ClapB7Driver::publish_twist(){
   double total_speed_linear= 0;
   double t_angular_speed_z= 0;
 
-  /* BestGnss Vel calculation
-   *
+
+  /*!
+   * In case of usage of GNSS horizantel speed as linear speed
    * total_speed_linear = clapB7Controller.clap_BestGnssData.horizontal_speed
-   *
-  */
+   * */
 
   if(ins_active_ == 0){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clap_ArgicData.Velocity_E,2)+std::pow(clapB7Controller.clap_ArgicData.Velocity_N,2));
@@ -924,7 +856,7 @@ void ClapB7Driver::publish_raw_nav_sat_fix(){
 
   msg_raw_nav_sat_fix.set__position_covariance(pos_cov);
 
-  pub_nav_sat_fix_->publish(msg_raw_nav_sat_fix);
+  pub_raw_nav_sat_fix_->publish(msg_raw_nav_sat_fix);
 
 }
 
@@ -982,6 +914,6 @@ void ClapB7Driver::publish_raw_imu()
   std::array<double, 9> linear_acc_cov{0.001};
   msg_raw_imu.set__linear_acceleration_covariance(linear_acc_cov);
 
-  pub_imu_->publish(msg_raw_imu);
+  pub_raw_imu_->publish(msg_raw_imu);
 
 }

@@ -4,11 +4,7 @@
     parse_type: "BINARY"
     baud_rate: 460800
     activate_ntrip: "true" #Runs ntrip_client_ros package
-    ntrip_ip: "212.156.70.42"
-    ntrip_user_name: "K0734151301"
-    ntrip_password: "GzMSQg"
-    ntrip_mount_point: "VRSRTCM31"
-    ntrip_port: 2101
+
     # Topics
     clap_imu_data: "clap/clap_msgs/clap_imu"
     clap_ins_data: "clap/clap_msgs/clap_ins"
