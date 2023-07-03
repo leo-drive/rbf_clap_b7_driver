@@ -15,6 +15,7 @@ int freq_rawimu = 0;
 int freq_inspvax = 0;
 int freq_agric = 0;
 int freq_bestgnss = 0;
+int freq_uniheading = 0;
 
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
@@ -164,6 +165,12 @@ ClapB7Driver::ClapB7Driver()
       pub_clap_ins_{create_publisher<rbf_clap_b7_msgs::msg::InsData>(
           clap_ins_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
+      pub_clap_agric_{create_publisher<rbf_clap_b7_msgs::msg::AgricData>(
+        "clap/clap_msgs/clap_agric", rclcpp::QoS{10}, PubAllocT{})},
+
+      pub_clap_uniheading_{create_publisher<rbf_clap_b7_msgs::msg::UniHeadingData>(
+            "clap/clap_msgs/clap_uniheading", rclcpp::QoS{10}, PubAllocT{})},
+
       pub_imu_{create_publisher<sensor_msgs::msg::Imu>(
           imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
@@ -183,10 +190,7 @@ ClapB7Driver::ClapB7Driver()
           raw_nav_sat_fix_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       pub_raw_imu_{create_publisher<sensor_msgs::msg::Imu>(
-          raw_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
-
-      pub_clap_agric_{create_publisher<rbf_clap_b7_msgs::msg::AgricData>(
-          "clap/clap_msgs/clap_agric", rclcpp::QoS{10}, PubAllocT{})},
+        raw_imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
       sub_rtcm_{create_subscription<mavros_msgs::msg::RTCM>(
                   rtcm_topic_,rclcpp::QoS{ 1 },std::bind(&ClapB7Driver::rtcmCallback, this, std::placeholders::_1))},
@@ -248,7 +252,8 @@ ClapB7Driver::ClapB7Driver()
 
   }
   // Init ClapB7
-  ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this),bind(&ClapB7Driver::pub_agric_data,this));
+  ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this),
+             bind(&ClapB7Driver::pub_agric_data,this), bind(&ClapB7Driver::pub_uniheading, this));
 
   if (activate_ntrip_ == "true") {
     /*
@@ -302,20 +307,14 @@ void ClapB7Driver::timer_callback()
     RCLCPP_WARN(this->get_logger(),"freq_inspvax_hz = %d\n", freq_inspvax);
     RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
     RCLCPP_WARN(this->get_logger(),"freq_bestgnss_hz = %d\n", freq_bestgnss);
-
-    //For clap_bestgnss debugging
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Sol_Status: %d\n",clapB7Controller.clap_BestGnssData.sol_status);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Velocity Type: %d\n",clapB7Controller.clap_BestGnssData.vel_type);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Latency: %f\n",clapB7Controller.clap_BestGnssData.latency);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Age: %f\n",clapB7Controller.clap_BestGnssData.age);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Horizontal speed: %lf\n",clapB7Controller.clap_BestGnssData.horizontal_speed);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Track angle: %lf\n",clapB7Controller.clap_BestGnssData.track_angle);
-    RCLCPP_INFO(this->get_logger(),"ClapB7 BestGNSS Vertical speed: %lf\n",clapB7Controller.clap_BestGnssData.vertical_speed);
+    RCLCPP_WARN(this->get_logger(),"freq_uniheading_hz = %d\n", freq_uniheading);
+    RCLCPP_INFO(this->get_logger(),"-----------------------------------------------------");
   }
   freq_rawimu = 0;
   freq_inspvax = 0;
   freq_agric = 0;
   freq_bestgnss = 0;
+  freq_uniheading = 0;
 }
 double ClapB7Driver::deg2rad(double degree){
   return (degree * (M_PI / 180));
@@ -499,6 +498,35 @@ void ClapB7Driver::pub_agric_data()
     publish_raw_nav_sat_fix();
 
 }
+
+void ClapB7Driver::pub_uniheading()
+{
+  rbf_clap_b7_msgs::msg::UniHeadingData msg_uniheading;
+
+  msg_uniheading.sol_stat = clapB7Controller.clap_UniHeadingData.sol_status;
+  msg_uniheading.pos_type = clapB7Controller.clap_UniHeadingData.pos_type;
+  msg_uniheading.length = clapB7Controller.clap_UniHeadingData.length;
+  msg_uniheading.heading = clapB7Controller.clap_UniHeadingData.heading;
+  msg_uniheading.pitch = clapB7Controller.clap_UniHeadingData.pitch;
+  msg_uniheading.reserved_float1 = clapB7Controller.clap_UniHeadingData.reserved_float1;
+  msg_uniheading.std_dev_heading = clapB7Controller.clap_UniHeadingData.std_dev_heading;
+  msg_uniheading.std_dev_pitch = clapB7Controller.clap_UniHeadingData.std_dev_pitch;
+  msg_uniheading.station_id = clapB7Controller.clap_UniHeadingData.base_station_id;
+  msg_uniheading.num_sats = clapB7Controller.clap_UniHeadingData.num_sats;
+  msg_uniheading.num_sats_sol = clapB7Controller.clap_UniHeadingData.num_sats_sol;
+  msg_uniheading.num_sats_above_elevation_mask = clapB7Controller.clap_UniHeadingData.num_sats_above_elevation_mask;
+  msg_uniheading.num_sats_above_elevation_mask_l2 = clapB7Controller.clap_UniHeadingData.num_sats_above_elevation_mask_L2;
+  msg_uniheading.reserved_char1 = clapB7Controller.clap_UniHeadingData.reserved_char1;
+  msg_uniheading.ext_sol_stat = clapB7Controller.clap_UniHeadingData.ext_sol_stat;
+  msg_uniheading.signal_mask_gal_bds3 = clapB7Controller.clap_UniHeadingData.signal_mask_gal_bds3;
+  msg_uniheading.signal_mask_gps_glo_bds2 = clapB7Controller.clap_UniHeadingData.signal_mask_gps_glo_bds2;
+  msg_uniheading.crc = clapB7Controller.clap_UniHeadingData.crc_hex;
+
+  pub_clap_uniheading_->publish(msg_uniheading);
+
+}
+
+
 
 void ClapB7Driver::publish_nav_sat_fix()
 {

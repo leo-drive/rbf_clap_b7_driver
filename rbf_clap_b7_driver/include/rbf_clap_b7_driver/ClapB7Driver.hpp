@@ -43,6 +43,7 @@
 #include <rbf_clap_b7_msgs/msg/imu_data.hpp>
 #include <rbf_clap_b7_msgs/msg/ins_data.hpp>
 #include <rbf_clap_b7_msgs/msg/agric_data.hpp>
+#include <rbf_clap_b7_msgs/msg/uni_heading_data.hpp>
 
 #include <ntrip/ntrip_client.h>
 #include "ClapB7BinaryParser.h"
@@ -69,6 +70,7 @@ extern int freq_rawimu;
 extern int freq_inspvax;
 extern int freq_agric;
 extern int freq_bestgnss;
+extern int freq_uniheading;
 
 
 class ClapB7Driver : public rclcpp::Node
@@ -125,6 +127,7 @@ private:
     void pub_imu_data();
     void pub_ins_data();
     void pub_agric_data();
+    void pub_uniheading();
     void publish_nav_sat_fix();
     void publish_std_imu();
     int64_t ros_time_to_gps_time_nano();
@@ -138,6 +141,7 @@ private:
                             geometry_msgs::msg::TransformStamped &ref_transform);
     void publish_raw_nav_sat_fix();
     void publish_raw_imu();
+
 
     
     double deg2rad(double degree);
@@ -200,6 +204,7 @@ private:
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::ImuData>::SharedPtr pub_clap_imu_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::InsData>::SharedPtr pub_clap_ins_;
     rclcpp::Publisher<rbf_clap_b7_msgs::msg::AgricData>::SharedPtr pub_clap_agric_;
+    rclcpp::Publisher<rbf_clap_b7_msgs::msg::UniHeadingData>::SharedPtr pub_clap_uniheading_;
     rclcpp::Publisher<sensor_msgs::msg::Imu>::SharedPtr pub_imu_;
     rclcpp::Publisher<sensor_msgs::msg::NavSatFix>::SharedPtr pub_nav_sat_fix_;
     rclcpp::Publisher<autoware_sensing_msgs::msg::GnssInsOrientationStamped>::SharedPtr pub_gnss_orientation_;

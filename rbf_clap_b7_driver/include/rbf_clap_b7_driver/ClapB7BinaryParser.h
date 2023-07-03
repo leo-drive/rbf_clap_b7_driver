@@ -21,6 +21,7 @@
 #define RAWIMU_MSG_ID    268U
 #define INSPVAX_MSG_ID   1465U
 #define BESTGNSS_MSG_ID  1430U
+#define UNIHEADING_MSG_ID   971U
 
 typedef enum
 {
@@ -201,6 +202,27 @@ struct __attribute__((packed)) ClapB7_BestGnssMsgs_ {
     int32_t crc_hex;
 };
 
+struct __attribute__((packed)) ClapB7_UniHeadingMsgs_ {
+    uint32_t sol_status;
+    uint32_t pos_type;
+    float length;
+    float heading;
+    float pitch;
+    float reserved_float1;
+    float std_dev_heading;
+    float std_dev_pitch;
+    int32_t base_station_id;
+    uint8_t num_sats;
+    uint8_t num_sats_sol;
+    uint8_t num_sats_above_elevation_mask;
+    uint8_t num_sats_above_elevation_mask_L2;
+    uint8_t reserved_char1;
+    uint8_t ext_sol_stat;
+    uint8_t signal_mask_gal_bds3;
+    uint8_t signal_mask_gps_glo_bds2;
+    int32_t crc_hex;
+};
+
 typedef struct
 {
     uint16_t dataIndex;
@@ -212,11 +234,14 @@ typedef struct
     ClapB7_InspvaxMsgs_ clapData;
     ClapB7_RawimuMsgs_  clap_RawimuMsgs;
     ClapB7_BestGnssMsgs_ clap_BestGnssData;
+    ClapB7_UniHeadingMsgs_ clap_UniHeadingData;
     std::function<void()> ins_parser;
     std::function<void()> imu_parser;
     std::function<void()> agric_parser;
+    std::function<void()> uniheading_parser;
 } ClapB7Controller;
 
 
-void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback,const std::function<void()> agric_callback);
+void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback,
+                const std::function<void()> agric_callback,const std::function<void()> uniheading_callback);
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len);

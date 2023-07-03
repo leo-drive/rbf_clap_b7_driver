@@ -1,0 +1,20 @@
+uint32 sol_stat
+uint32 pos_type
+float32 length
+float32 heading
+float32 pitch
+float32 reserved_float1
+float32 std_dev_heading
+float32 std_dev_pitch
+int32 station_id
+uint8 num_sats
+uint8 num_sats_sol
+uint8 num_sats_above_elevation_mask
+uint8 num_sats_above_elevation_mask_l2
+uint8 reserved_char1
+uint8 ext_sol_stat
+uint8 signal_mask_gal_bds3
+uint8 signal_mask_gps_glo_bds2
+int32 crc
+
+
