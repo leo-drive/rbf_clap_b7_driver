@@ -659,24 +659,22 @@ void ClapB7Driver::publish_twist(){
   double total_speed_linear= 0;
   double t_angular_speed_z= 0;
 
-  /* BestGnss Vel calculation
-   *
-   * total_speed_linear = clapB7Controller.clap_BestGnssData.horizontal_speed
-   *
-  */
 
+  total_speed_linear = clapB7Controller.clap_BestGnssData.horizontal_speed;
+
+  /*
   if(ins_active_ == 0){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clap_ArgicData.Velocity_E,2)+std::pow(clapB7Controller.clap_ArgicData.Velocity_N,2));
   }
   else if(ins_active_ == 1){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clapData.east_velocity,2)+std::pow(clapB7Controller.clapData.north_velocity,2));
   }
-
-  if(cos(deg2rad(clapB7Controller.clapData.azimuth - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
-    msg_twist.twist.twist.linear.x = total_speed_linear;
+    */
+  if(cos(deg2rad(clapB7Controller.clap_UniHeadingData.heading - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
+    msg_twist.twist.twist.linear.x = -total_speed_linear;
   }
   else{
-    msg_twist.twist.twist.linear.x = -total_speed_linear;
+    msg_twist.twist.twist.linear.x = total_speed_linear;
   }
 
   t_angular_speed_z = deg2rad(clapB7Controller.clap_RawimuMsgs.z_gyro_output * GYRO_SCALE_FACTOR * HZ_TO_SECOND);
@@ -708,10 +706,10 @@ void ClapB7Driver::publish_orientation()
     }
     else if(ins_active_ == 1)*/{
 
-        quart_orient.setRPY(deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.roll), deg2rad(-clapB7Controller.clap_ArgicData.Heading+90));
+        quart_orient.setRPY(deg2rad(clapB7Controller.clap_UniHeadingData.pitch), deg2rad(clapB7Controller.clapData.roll), deg2rad(-clapB7Controller.clap_UniHeadingData.heading+90));
     }
 
-    RCLCPP_ERROR(this->get_logger(),"Nort gönderilen: %lf", -clapB7Controller.clap_ArgicData.Heading+90);
+    //RCLCPP_ERROR(this->get_logger(),"Nort gönderilen: %lf", -clapB7Controller.clap_ArgicData.Heading+90);
   if(enu_ned_transform_=="true"){
 
     transform_enu_to_ned(quart_orient);
@@ -730,8 +728,8 @@ void ClapB7Driver::publish_orientation()
   }
 
   msg_gnss_orientation.orientation.rmse_rotation_y = clapB7Controller.clapData.std_dev_roll;
-  msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clapData.std_dev_pitch;
-  msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clapData.std_dev_azimuth;
+  msg_gnss_orientation.orientation.rmse_rotation_x = clapB7Controller.clap_UniHeadingData.std_dev_pitch;
+  msg_gnss_orientation.orientation.rmse_rotation_z = clapB7Controller.clap_UniHeadingData.std_dev_heading;
 
   pub_gnss_orientation_->publish(msg_gnss_orientation);
 
@@ -760,9 +758,7 @@ void ClapB7Driver::publish_odom(){
 
   gnss_stat = NavSatFix2LocalCartesianUTM(nav_sat_fix_msg,nav_sat_fix_origin);
 
-  RCLCPP_INFO(this->get_logger(), "GNSS Status x: %f", gnss_stat.x);
-  RCLCPP_INFO(this->get_logger(), "GNSS Status y: %f", gnss_stat.y);
-  RCLCPP_INFO(this->get_logger(), "GNSS Status z: %f", gnss_stat.z);
+
 
 
   // Fill in the message.
@@ -834,7 +830,7 @@ void ClapB7Driver::publish_transform(
 void ClapB7Driver::rtcmCallback(const mavros_msgs::msg::RTCM::ConstSharedPtr msg_rtcm) {
   //RCLCPP_INFO(this->get_logger(),"Received Data: %d",msg_rtcm->data.data());
   char buffer[msg_rtcm->data.size()];
-  RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
+  //RCLCPP_INFO(this->get_logger(),"Received Data size: %d",msg_rtcm->data.size());
 
   for(int i = 0;i<msg_rtcm->data.size();i++){
     buffer[i] = msg_rtcm->data.at(i);
@@ -883,6 +879,8 @@ void ClapB7Driver::publish_raw_nav_sat_fix(){
   msg_raw_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
   msg_raw_nav_sat_fix.status.set__service(1); // GPS Connection
 
+
+  //TODO(faruk): change agric lat-lon to bestgnss lat-lon
   msg_raw_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
   msg_raw_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
   msg_raw_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));

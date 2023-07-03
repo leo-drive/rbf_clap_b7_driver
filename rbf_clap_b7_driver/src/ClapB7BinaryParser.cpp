@@ -237,8 +237,18 @@ void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_
                         }
                         else if(p_Controller->header.messageID == UNIHEADING_MSG_ID){
                             freq_uniheading++;
+
+
+
                             memcpy(&p_Controller->clap_UniHeadingData, (p_Controller->rawData + p_Controller->header.headerLength), sizeof(ClapB7_UniHeadingMsgs_));
+
+                            p_Controller->clap_UniHeadingData.heading -= 90.0;
+
+                            if(p_Controller->clap_UniHeadingData.heading <0){
+                                p_Controller->clap_UniHeadingData.heading += 360;
+                            }
                             p_Controller->uniheading_parser();
+
                         }
 
                     }
