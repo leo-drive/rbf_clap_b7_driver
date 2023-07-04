@@ -7,21 +7,22 @@
 #include <cstdint>
 #include <functional>
 
-#define HEADER_LEN 	 	        28U
-#define HEADER_LEN_AGRIC 	 	24U
-#define CRC_LEN			 4U
-#define MAX_DATA_LEN 	512U
+#define HEADER_LEN 	 	                28U
+#define HEADER_LEN_AGRIC 	 	        24U
+#define CRC_LEN			                4U
+#define MAX_DATA_LEN 	                512U
 
-#define FIRST_SYNCH		0xAAU
-#define SECOND_SYNCH	0x44U
-#define THIRD_SYNCH		0x12U
+#define FIRST_SYNCH		                0xAAU
+#define SECOND_SYNCH	                0x44U
+#define THIRD_SYNCH		                0x12U
 
-#define THIRD_SYNCH_GPGGA   0xB5U
+#define THIRD_SYNCH_GPGGA               0xB5U
 
-#define RAWIMU_MSG_ID    268U
-#define INSPVAX_MSG_ID   1465U
-#define BESTGNSS_MSG_ID  1430U
-#define UNIHEADING_MSG_ID   971U
+#define RAWIMU_MSG_ID                   268U
+#define INSPVAX_MSG_ID                  1465U
+#define BESTGNSSVEL_MSG_ID              1430U
+#define BESTGNSSPOS_MSG_ID              1429U
+#define UNIHEADING_MSG_ID               971U
 
 typedef enum
 {
@@ -190,7 +191,7 @@ struct __attribute__((packed)) ClapB7_RawimuMsgs_ {
     int crc;
 };
 
-struct __attribute__((packed)) ClapB7_BestGnssMsgs_ {
+struct __attribute__((packed)) ClapB7_BestGnssVelMsgs_ {
     uint32_t sol_status;
     uint32_t vel_type;
     float latency;
@@ -200,6 +201,30 @@ struct __attribute__((packed)) ClapB7_BestGnssMsgs_ {
     double vertical_speed;
     uint32_t reserved;
     int32_t crc_hex;
+};
+
+struct __attribute__((packed)) ClapB7_BestGnssPosMsgs_ {
+    uint32_t sol_status;
+    uint32_t pos_type;
+    double latitude;
+    double longitude;
+    double height;
+    float undulation;
+    uint32_t datum_id;
+    float std_dev_latitude;
+    float std_dev_longitude;
+    float std_dev_height;
+    int32_t station_id;
+    float diff_age;
+    float solution_age;
+    uint8_t num_sats_tracked;
+    uint8_t num_sats_in_solution;
+    uint8_t reserved_1;
+    uint8_t reserved_2;
+    uint8_t reserved_3;
+    uint8_t ext_sol_stat;
+    uint8_t gal_beidou_sig_mask;
+    uint8_t gps_glonass_sig_mask;
 };
 
 struct __attribute__((packed)) ClapB7_UniHeadingMsgs_ {
@@ -233,15 +258,17 @@ typedef struct
     ClapB7_AgricMsg_    clap_ArgicData;
     ClapB7_InspvaxMsgs_ clapData;
     ClapB7_RawimuMsgs_  clap_RawimuMsgs;
-    ClapB7_BestGnssMsgs_ clap_BestGnssData;
+    ClapB7_BestGnssVelMsgs_ clap_BestGnssVelData;
+    ClapB7_BestGnssPosMsgs_ clap_BestGnssPosData;
     ClapB7_UniHeadingMsgs_ clap_UniHeadingData;
     std::function<void()> ins_parser;
     std::function<void()> imu_parser;
     std::function<void()> agric_parser;
     std::function<void()> uniheading_parser;
+    std::function<void()> bestgnsspos_parser;
 } ClapB7Controller;
 
 
 void ClapB7Init(ClapB7Controller* p_Controller, const std::function<void()> imu_callback, const std::function<void()> ins_callback,
-                const std::function<void()> agric_callback,const std::function<void()> uniheading_callback);
+                const std::function<void()> agric_callback,const std::function<void()> uniheading_callback, const std::function<void()> bestgnsspos_callback);
 void ClapB7Parser(ClapB7Controller* p_Controller, const uint8_t* p_Data, uint16_t len);

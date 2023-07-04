@@ -16,6 +16,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
         "msg/InsData.msg"
         "msg/AgricData.msg"
         "msg/UniHeadingData.msg"
+        "msg/GpsPos.msg"
         )
 
 if(BUILD_TESTING)

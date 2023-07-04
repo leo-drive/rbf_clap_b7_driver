@@ -16,6 +16,7 @@ int freq_inspvax = 0;
 int freq_agric = 0;
 int freq_bestgnss = 0;
 int freq_uniheading = 0;
+int freq_bestgnsspos = 0;
 
 ClapB7Driver::ClapB7Driver()
     : Node("rbf_clap_b7_driver"),
@@ -171,6 +172,9 @@ ClapB7Driver::ClapB7Driver()
       pub_clap_uniheading_{create_publisher<rbf_clap_b7_msgs::msg::UniHeadingData>(
             "clap/clap_msgs/clap_uniheading", rclcpp::QoS{10}, PubAllocT{})},
 
+      pub_clap_gnsspos_{create_publisher<rbf_clap_b7_msgs::msg::GpsPos>(
+              "clap/clap_msgs/clap_bestgnsspos", rclcpp::QoS{10}, PubAllocT{})},
+
       pub_imu_{create_publisher<sensor_msgs::msg::Imu>(
           imu_topic_, rclcpp::QoS{10}, PubAllocT{})},
 
@@ -253,7 +257,7 @@ ClapB7Driver::ClapB7Driver()
   }
   // Init ClapB7
   ClapB7Init(&clapB7Controller, bind(&ClapB7Driver::pub_imu_data, this), bind(&ClapB7Driver::pub_ins_data, this),
-             bind(&ClapB7Driver::pub_agric_data,this), bind(&ClapB7Driver::pub_uniheading, this));
+             bind(&ClapB7Driver::pub_agric_data,this), bind(&ClapB7Driver::pub_uniheading, this), bind(&ClapB7Driver::pub_gnsspos_data, this));
 
   if (activate_ntrip_ == "true") {
     /*
@@ -308,6 +312,7 @@ void ClapB7Driver::timer_callback()
     RCLCPP_WARN(this->get_logger(),"freq_agric_hz = %d\n", freq_agric);
     RCLCPP_WARN(this->get_logger(),"freq_bestgnss_hz = %d\n", freq_bestgnss);
     RCLCPP_WARN(this->get_logger(),"freq_uniheading_hz = %d\n", freq_uniheading);
+      RCLCPP_WARN(this->get_logger(),"freq_bestgnsspos_hz = %d\n", freq_bestgnsspos);
     RCLCPP_INFO(this->get_logger(),"-----------------------------------------------------");
   }
   freq_rawimu = 0;
@@ -315,6 +320,7 @@ void ClapB7Driver::timer_callback()
   freq_agric = 0;
   freq_bestgnss = 0;
   freq_uniheading = 0;
+  freq_bestgnsspos = 0;
 }
 double ClapB7Driver::deg2rad(double degree){
   return (degree * (M_PI / 180));
@@ -322,7 +328,6 @@ double ClapB7Driver::deg2rad(double degree){
 }
 void ClapB7Driver::pub_imu_data()
 {
-
   rbf_clap_b7_msgs::msg::ImuData msg_imu_data;
 
   msg_imu_data.set__imu_status(static_cast<uint8_t>(clapB7Controller.clap_RawimuMsgs.imu_status));
@@ -337,6 +342,29 @@ void ClapB7Driver::pub_imu_data()
 
   pub_clap_imu_->publish(msg_imu_data);
  
+}
+
+void ClapB7Driver::pub_gnsspos_data(){
+    rbf_clap_b7_msgs::msg::GpsPos msg_gnsspos_data;
+    msg_gnsspos_data.set__pos_type(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.pos_type));
+    msg_gnsspos_data.set__sol_status(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.sol_status));
+    msg_gnsspos_data.set__latitude(static_cast<double>(clapB7Controller.clap_BestGnssPosData.latitude));
+    msg_gnsspos_data.set__longitude(static_cast<double>(clapB7Controller.clap_BestGnssPosData.longitude));
+    msg_gnsspos_data.set__height(static_cast<double>(clapB7Controller.clap_BestGnssPosData.height));
+    msg_gnsspos_data.set__undulation(static_cast<float>(clapB7Controller.clap_BestGnssPosData.undulation));
+    msg_gnsspos_data.set__datum_id(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.datum_id));
+    msg_gnsspos_data.set__std_dev_latitude(static_cast<float>(clapB7Controller.clap_BestGnssPosData.std_dev_latitude));
+    msg_gnsspos_data.set__std_dev_longitude(static_cast<float>(clapB7Controller.clap_BestGnssPosData.std_dev_longitude));
+    msg_gnsspos_data.set__std_dev_height(static_cast<float>(clapB7Controller.clap_BestGnssPosData.std_dev_height));
+    msg_gnsspos_data.set__station_id(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.station_id));
+    msg_gnsspos_data.set__diff_age(static_cast<float>(clapB7Controller.clap_BestGnssPosData.diff_age));
+    msg_gnsspos_data.set__solution_age(static_cast<float>(clapB7Controller.clap_BestGnssPosData.solution_age));
+    msg_gnsspos_data.set__num_sats_tracked(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.num_sats_tracked));
+    msg_gnsspos_data.set__num_sats_in_solution(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.num_sats_in_solution));
+    msg_gnsspos_data.set__ext_sol_stat(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.ext_sol_stat));
+    msg_gnsspos_data.set__gal_beidou_sig_mask(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.gal_beidou_sig_mask));
+    msg_gnsspos_data.set__gps_glonass_sig_mask(static_cast<uint32_t>(clapB7Controller.clap_BestGnssPosData.gps_glonass_sig_mask));
+    pub_clap_gnsspos_->publish(msg_gnsspos_data);
 }
 
 void ClapB7Driver::pub_ins_data() {
@@ -570,14 +598,14 @@ void ClapB7Driver::publish_standart_msgs_agric()
   msg_nav_sat_fix.status.set__status(clapB7Controller.clapData.ins_status);
   msg_nav_sat_fix.status.set__service(1); // GPS Connection
 
-  msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_ArgicData.lat));
-  msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_ArgicData.lon));
-  msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_ArgicData.Het));
+  msg_nav_sat_fix.set__latitude(static_cast<double>(clapB7Controller.clap_BestGnssPosData.latitude));
+  msg_nav_sat_fix.set__longitude(static_cast<double>(clapB7Controller.clap_BestGnssPosData.longitude));
+  msg_nav_sat_fix.set__altitude(static_cast<double>(clapB7Controller.clap_BestGnssPosData.height));
 
   std::array<double, 9> pos_cov{0};
-  pos_cov[0] = std::pow(clapB7Controller.clap_ArgicData.Xigema_lat,2);
-  pos_cov[4] = std::pow(clapB7Controller.clap_ArgicData.Xigema_lon,2);
-  pos_cov[8] = std::pow(clapB7Controller.clap_ArgicData.Xigema_alt,2);
+  pos_cov[0] = std::pow(clapB7Controller.clap_BestGnssPosData.std_dev_latitude,2);
+  pos_cov[4] = std::pow(clapB7Controller.clap_BestGnssPosData.std_dev_longitude,2);
+  pos_cov[8] = std::pow(clapB7Controller.clap_BestGnssPosData.std_dev_height,2);
 
   msg_nav_sat_fix.set__position_covariance(pos_cov);
 
@@ -593,7 +621,7 @@ void ClapB7Driver::publish_std_imu(){
   tf2::Quaternion quart_orient;
 
   if(ins_active_ == 0){
-    quart_orient.setRPY(deg2rad(clapB7Controller.clap_ArgicData.Pitch), deg2rad(clapB7Controller.clap_ArgicData.Roll), deg2rad(-clapB7Controller.clap_ArgicData.Heading));
+    quart_orient.setRPY(deg2rad(clapB7Controller.clap_UniHeadingData.pitch), deg2rad(clapB7Controller.clapData.roll), deg2rad(-clapB7Controller.clap_UniHeadingData.heading));
   }
   else if(ins_active_ == 1){
     quart_orient.setRPY(deg2rad(clapB7Controller.clapData.pitch), deg2rad(clapB7Controller.clapData.roll), deg2rad(-clapB7Controller.clapData.azimuth));
@@ -627,7 +655,7 @@ void ClapB7Driver::publish_std_imu(){
   std::array<double, 9> orient_cov{0.001};
   orient_cov[0] = std::pow(clapB7Controller.clapData.std_dev_roll,2);
   orient_cov[4] = std::pow(clapB7Controller.clapData.std_dev_pitch,2);
-  orient_cov[8] = std::pow(clapB7Controller.clapData.std_dev_azimuth,2);
+  orient_cov[8] = std::pow(clapB7Controller.clap_UniHeadingData.std_dev_heading,2);
 
   msg_imu.set__orientation_covariance(orient_cov);
 
@@ -660,7 +688,7 @@ void ClapB7Driver::publish_twist(){
   double t_angular_speed_z= 0;
 
 
-  total_speed_linear = clapB7Controller.clap_BestGnssData.horizontal_speed;
+  total_speed_linear = clapB7Controller.clap_BestGnssVelData.horizontal_speed;
 
   /*
   if(ins_active_ == 0){
@@ -670,7 +698,7 @@ void ClapB7Driver::publish_twist(){
     total_speed_linear = std::sqrt(std::pow(clapB7Controller.clapData.east_velocity,2)+std::pow(clapB7Controller.clapData.north_velocity,2));
   }
     */
-  if(cos(deg2rad(clapB7Controller.clap_UniHeadingData.heading - clapB7Controller.clap_BestGnssData.track_angle)) < 0){
+  if(cos(deg2rad(clapB7Controller.clap_UniHeadingData.heading - clapB7Controller.clap_BestGnssVelData.track_angle)) < 0){
     msg_twist.twist.twist.linear.x = -total_speed_linear;
   }
   else{
